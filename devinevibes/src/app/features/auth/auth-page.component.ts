@@ -15,14 +15,14 @@ import { NotificationService } from '../../core/services/notification.service';
 
       <form [formGroup]="otpForm" (ngSubmit)="sendOtp()">
         <input formControlName="phone" placeholder="Phone number" />
-        <small class="error">{{ formErrors.errors().phone }}</small>
+        <small class="error">{{ formErrors.errors()['phone'] }}</small>
         <button class="btn" type="submit">Send OTP</button>
       </form>
 
       <form [formGroup]="verifyForm" (ngSubmit)="verifyOtp()">
         <input formControlName="phone" placeholder="Phone number" />
         <input formControlName="otp" placeholder="OTP" />
-        <small class="error">{{ formErrors.errors().otp }}</small>
+        <small class="error">{{ formErrors.errors()['otp'] }}</small>
         <button class="btn primary" type="submit">Verify OTP</button>
       </form>
 

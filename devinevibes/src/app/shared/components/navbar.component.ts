@@ -29,7 +29,7 @@ import { AuthService } from '../../core/services/auth.service';
     </header>
   `,
   styles: [
-    `.nav-wrap{padding:1rem 1.25rem;position:sticky;top:0;z-index:10;background:rgba(15,15,15,.95);backdrop-filter:blur(8px)}`,
+    `.nav-wrap{padding:1rem 1.25rem;position:sticky;top:0;z-index:10;background:#d8d8d8;backdrop-filter:blur(8px)}`,
     `.nav{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;background:#f2f2f2;border-radius:16px;padding:.9rem 1.25rem}`,
     `.brand{display:flex;align-items:center;gap:.55rem;font-size:1.5rem;color:#1f2330;font-weight:700}`,
     `.brand-mark{display:inline-flex;height:28px;width:28px;border-radius:8px;background:#d4af37;color:#161616;align-items:center;justify-content:center;font-size:14px}`,
