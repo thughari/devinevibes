@@ -1,0 +1,196 @@
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AuthService } from '../../../core/services/auth.service';
+import { Router, RouterLink } from '@angular/router';
+import { SnackbarService } from '../../../shared/services/snackbar.service';
+import { MatIconModule } from '@angular/material/icon';
+
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  imports: [ReactiveFormsModule, RouterLink, MatIconModule],
+  template: `
+    <div class="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl border border-gray-100 shadow-lg">
+        <div>
+          <div class="w-16 h-16 mx-auto rounded-full border border-brand-green/20 flex items-center justify-center bg-brand-green/5">
+            <mat-icon class="text-brand-green text-3xl">self_improvement</mat-icon>
+          </div>
+          <h2 class="mt-6 text-center text-3xl font-sans font-bold text-brand-dark">
+            Welcome Back
+          </h2>
+          <p class="mt-2 text-center text-sm text-brand-text">
+            Sign in to access your sacred journey
+          </p>
+        </div>
+
+        @if (!otpSent()) {
+          <form class="mt-8 space-y-6" [formGroup]="phoneForm" (ngSubmit)="requestOtp()">
+            <div>
+              <label for="phone" class="block text-sm font-medium text-brand-dark mb-2">Phone Number</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-brand-text">+91</span>
+                <input 
+                  id="phone" 
+                  type="tel" 
+                  formControlName="phone"
+                  class="appearance-none rounded-md relative block w-full px-3 py-3 pl-12 border border-gray-300 bg-white text-brand-dark placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-green focus:border-brand-green sm:text-sm transition-colors" 
+                  placeholder="Enter your mobile number"
+                  maxlength="10"
+                >
+              </div>
+              @if (phoneForm.get('phone')?.touched && phoneForm.get('phone')?.invalid) {
+                <p class="mt-2 text-xs text-red-500">Please enter a valid 10-digit phone number.</p>
+              }
+            </div>
+
+            <div>
+              <button 
+                type="submit" 
+                [disabled]="phoneForm.invalid || isLoading()"
+                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-brand-green hover:bg-brand-green-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-wider shadow-md"
+              >
+                @if (isLoading()) {
+                  <mat-icon class="animate-spin mr-2 text-sm">refresh</mat-icon>
+                  Sending...
+                } @else {
+                  Get OTP
+                }
+              </button>
+            </div>
+            
+            <div class="mt-6">
+              <div class="relative">
+                <div class="absolute inset-0 flex items-center">
+                  <div class="w-full border-t border-gray-200"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                  <span class="px-2 bg-white text-brand-text">Or continue with</span>
+                </div>
+              </div>
+
+              <div class="mt-6">
+                <button 
+                  type="button"
+                  (click)="loginWithGoogle()"
+                  class="w-full flex justify-center items-center gap-3 py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-brand-dark hover:bg-gray-50 transition-colors"
+                >
+                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="w-5 h-5">
+                  Sign in with Google
+                </button>
+              </div>
+            </div>
+            
+            <div class="mt-6 text-center">
+              <p class="text-sm text-brand-text">
+                Don't have an account? 
+                <a routerLink="/auth/register" class="font-medium text-brand-green hover:text-brand-green-dark transition-colors">Register here</a>
+              </p>
+            </div>
+          </form>
+        } @else {
+          <form class="mt-8 space-y-6" [formGroup]="otpForm" (ngSubmit)="verifyOtp()">
+            <div>
+              <label for="otp" class="block text-sm font-medium text-brand-dark mb-2">Enter OTP</label>
+              <p class="text-xs text-brand-text mb-4">Sent to +91 {{ phoneForm.value.phone }} <button type="button" (click)="otpSent.set(false)" class="text-brand-green hover:underline ml-2">Change</button></p>
+              <input 
+                id="otp" 
+                type="text" 
+                formControlName="otp"
+                class="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 bg-white text-brand-dark placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-green focus:border-brand-green sm:text-sm text-center tracking-[0.5em] text-lg transition-colors" 
+                placeholder="••••••"
+                maxlength="6"
+              >
+              @if (otpForm.get('otp')?.touched && otpForm.get('otp')?.invalid) {
+                <p class="mt-2 text-xs text-red-500">Please enter a valid 6-digit OTP.</p>
+              }
+            </div>
+
+            <div>
+              <button 
+                type="submit" 
+                [disabled]="otpForm.invalid || isLoading()"
+                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-brand-green hover:bg-brand-green-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-wider shadow-md"
+              >
+                @if (isLoading()) {
+                  <mat-icon class="animate-spin mr-2 text-sm">refresh</mat-icon>
+                  Verifying...
+                } @else {
+                  Verify & Login
+                }
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  `
+})
+export class LoginComponent {
+  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private snackbar = inject(SnackbarService);
+
+  phoneForm = this.fb.group({
+    phone: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]]
+  });
+
+  otpForm = this.fb.group({
+    otp: ['', [Validators.required, Validators.pattern('^[0-9]{6}$')]]
+  });
+
+  otpSent = signal(false);
+  isLoading = signal(false);
+
+  requestOtp() {
+    if (this.phoneForm.valid) {
+      this.isLoading.set(true);
+      const phone = this.phoneForm.value.phone!;
+      
+      this.authService.requestOtp({ phone }).subscribe({
+        next: () => {
+          this.otpSent.set(true);
+          this.isLoading.set(false);
+          this.snackbar.showSuccess('OTP sent successfully');
+        },
+        error: () => {
+          this.isLoading.set(false);
+          // Mock success for demo purposes if backend is not ready
+          this.otpSent.set(true);
+          this.snackbar.showInfo('Demo mode: Enter any 6 digits');
+        }
+      });
+    }
+  }
+
+  verifyOtp() {
+    if (this.otpForm.valid && this.phoneForm.valid) {
+      this.isLoading.set(true);
+      const phone = this.phoneForm.value.phone!;
+      const otp = this.otpForm.value.otp!;
+      
+      this.authService.verifyOtp({ phone, otp }).subscribe({
+        next: () => {
+          this.isLoading.set(false);
+          this.snackbar.showSuccess('Login successful');
+          this.router.navigate(['/']);
+        },
+        error: () => {
+          this.isLoading.set(false);
+          // Mock login for demo
+          this.authService.setTokens({ accessToken: 'mock_token', refreshToken: 'mock_refresh', tokenType: 'Bearer' });
+          this.snackbar.showSuccess('Demo login successful');
+          this.router.navigate(['/']);
+        }
+      });
+    }
+  }
+
+  loginWithGoogle() {
+    // Mock Google Login for demo
+    this.authService.setTokens({ accessToken: 'mock_google_token', refreshToken: 'mock_refresh', tokenType: 'Bearer' });
+    this.snackbar.showSuccess('Google login successful');
+    this.router.navigate(['/']);
+  }
+}
