@@ -2,6 +2,9 @@ import { Component, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
+import { ApiService } from '../../../core/services/api.service';
+import { ProductResponse } from '../../../shared/models/product.model';
+import { OrderResponse } from '../../../shared/models/order.model';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -84,7 +87,7 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                @for (p of mockProducts; track p.id) {
+                @for (p of products(); track p.id) {
                   <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center">
@@ -130,20 +133,18 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
+                @for (order of orders(); track order.id) {
                 <tr class="hover:bg-gray-50 transition-colors">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">ORD-847291</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">john&#64;example.com</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">{{ order.id }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ order.razorpayOrderId || "-" }}</td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <select class="bg-white border border-gray-300 text-yellow-600 text-xs rounded-md focus:ring-dv-green focus:border-dv-green block p-1.5">
-                      <option selected>Processing</option>
-                      <option>Shipped</option>
-                      <option>Delivered</option>
-                    </select>
+                    <span class="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full">{{ order.orderStatus }}</span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button (click)="viewOrderDetails('ORD-847291')" class="text-dv-green hover:text-green-700">View Details</button>
+                    <button (click)="viewOrderDetails(order.id)" class="text-dv-green hover:text-green-700">View Details</button>
                   </td>
                 </tr>
+                }
               </tbody>
             </table>
           </div>
@@ -153,13 +154,36 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
   `
 })
 export class AdminDashboardComponent {
+  private api = inject(ApiService);
   private snackbar = inject(SnackbarService);
   activeTab = signal<'products' | 'orders'>('products');
+  isLoading = signal(false);
+  products = signal<ProductResponse[]>([]);
+  orders = signal<OrderResponse[]>([]);
 
-  mockProducts = [
-    { id: '1', name: '5 Mukhi Rudraksha Mala', price: 1500, stock: 10, imageUrl: 'https://picsum.photos/seed/mala1/100/100' },
-    { id: '2', name: 'Karungali Mala', price: 2200, stock: 3, imageUrl: 'https://picsum.photos/seed/karungali/100/100' },
-  ];
+  constructor() {
+    this.loadDashboardData();
+  }
+
+  loadDashboardData() {
+    this.isLoading.set(true);
+
+    this.api.get<ProductResponse[]>('/products').subscribe({
+      next: (products) => this.products.set(products),
+      error: () => this.snackbar.showError('Unable to load products.')
+    });
+
+    this.api.get<OrderResponse[]>('/admin/orders').subscribe({
+      next: (orders) => {
+        this.orders.set(orders);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.snackbar.showError('Unable to load orders.');
+      }
+    });
+  }
 
   addProduct() {
     this.snackbar.showInfo('Add Product functionality coming soon!');
@@ -170,7 +194,13 @@ export class AdminDashboardComponent {
   }
 
   deleteProduct(id: string) {
-    this.snackbar.showError(`Delete product ${id} functionality coming soon!`);
+    this.api.delete<void>(`/admin/products/${id}`).subscribe({
+      next: () => {
+        this.products.update(items => items.filter(p => p.id !== id));
+        this.snackbar.showSuccess('Product deleted successfully.');
+      },
+      error: () => this.snackbar.showError('Unable to delete product.')
+    });
   }
 
   viewOrderDetails(orderId: string) {

@@ -4,6 +4,20 @@ import { AuthService } from '../../../core/services/auth.service';
 import { Router, RouterLink } from '@angular/router';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
+import { environment } from '../../../../environments/environment';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: { client_id: string; callback: (response: { credential: string }) => void }) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
 
 @Component({
   selector: 'app-login',
@@ -156,9 +170,7 @@ export class LoginComponent {
         },
         error: () => {
           this.isLoading.set(false);
-          // Mock success for demo purposes if backend is not ready
-          this.otpSent.set(true);
-          this.snackbar.showInfo('Demo mode: Enter any 6 digits');
+          this.snackbar.showError('Unable to send OTP. Please check the phone number and try again.');
         }
       });
     }
@@ -178,19 +190,64 @@ export class LoginComponent {
         },
         error: () => {
           this.isLoading.set(false);
-          // Mock login for demo
-          this.authService.setTokens({ accessToken: 'mock_token', refreshToken: 'mock_refresh', tokenType: 'Bearer' });
-          this.snackbar.showSuccess('Demo login successful');
-          this.router.navigate(['/']);
+          this.snackbar.showError('Invalid OTP. Please try again.');
         }
       });
     }
   }
 
   loginWithGoogle() {
-    // Mock Google Login for demo
-    this.authService.setTokens({ accessToken: 'mock_google_token', refreshToken: 'mock_refresh', tokenType: 'Bearer' });
-    this.snackbar.showSuccess('Google login successful');
-    this.router.navigate(['/']);
+    if (!environment.googleClientId) {
+      this.snackbar.showError('Google login is not configured. Missing Google client ID.');
+      return;
+    }
+
+    this.ensureGoogleScript()
+      .then(() => {
+        if (!window.google?.accounts?.id) {
+          throw new Error('Google Identity Services unavailable');
+        }
+
+        window.google.accounts.id.initialize({
+          client_id: environment.googleClientId,
+          callback: ({ credential }) => {
+            this.authService.loginWithGoogle({ idToken: credential }).subscribe({
+              next: () => {
+                this.snackbar.showSuccess('Google login successful');
+                this.router.navigate(['/']);
+              }
+            });
+          }
+        });
+
+        window.google.accounts.id.prompt();
+      })
+      .catch(() => {
+        this.snackbar.showError('Unable to start Google login.');
+      });
+  }
+
+  private ensureGoogleScript(): Promise<void> {
+    if (window.google?.accounts?.id) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-google-identity="true"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('load error')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.dataset['googleIdentity'] = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('load error'));
+      document.head.appendChild(script);
+    });
   }
 }

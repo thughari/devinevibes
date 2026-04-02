@@ -200,9 +200,7 @@ export class RegisterComponent {
       this.isLoading.set(true);
       this.error.set(null);
       
-      const { email, password, name } = this.registerForm.value;
-      
-      this.authService.register(email!, password!, name!).subscribe({
+      this.authService.register().subscribe({
         next: () => {
           this.router.navigate(['/']);
         },

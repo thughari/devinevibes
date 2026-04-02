@@ -5,12 +5,14 @@ import com.devinevibes.dto.product.ProductResponse;
 import com.devinevibes.service.product.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin/products")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminProductController {
 
     private final ProductService productService;

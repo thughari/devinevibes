@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { ApiService } from './api.service';
 import { AuthResponse, GoogleLoginRequest, OtpRequest, OtpVerifyRequest } from '../../shared/models/auth.model';
 import { UserProfileResponse } from '../../shared/models/user.model';
-import { tap, catchError } from 'rxjs/operators';
+import { tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 
@@ -75,22 +75,8 @@ export class AuthService {
     );
   }
 
-  register(email: string, password: string, name: string): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/auth/register', { email, password, name }).pipe(
-      tap(res => {
-        this.setTokens(res);
-        this.fetchProfile().subscribe();
-      })
-    );
-  }
-
-  login(email: string, password: string): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/auth/login', { email, password }).pipe(
-      tap(res => {
-        this.setTokens(res);
-        this.fetchProfile().subscribe();
-      })
-    );
+  register(): Observable<never> {
+    return throwError(() => new Error('Email/password registration is not enabled. Please use OTP or Google login.'));
   }
 
   requestOtp(data: OtpRequest): Observable<unknown> {
@@ -98,7 +84,7 @@ export class AuthService {
   }
 
   verifyOtp(data: OtpVerifyRequest): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/auth/otp/verify', data).pipe(
+    return this.api.post<AuthResponse>('/auth/verify-otp', data).pipe(
       tap(res => {
         this.setTokens(res);
         this.fetchProfile().subscribe();
@@ -106,22 +92,8 @@ export class AuthService {
     );
   }
 
-  refreshToken(): Observable<AuthResponse> {
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
-      return throwError(() => new Error('No refresh token'));
-    }
-    return this.api.post<AuthResponse>('/auth/refresh', { refreshToken }).pipe(
-      tap(res => this.setTokens(res)),
-      catchError(err => {
-        this.logout();
-        return throwError(() => err);
-      })
-    );
-  }
-
   fetchProfile(): Observable<UserProfileResponse> {
-    return this.api.get<UserProfileResponse>('/users/me').pipe(
+    return this.api.get<UserProfileResponse>('/user/me').pipe(
       tap(profile => this.currentUser.set(profile))
     );
   }

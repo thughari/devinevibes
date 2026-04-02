@@ -33,8 +33,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         }
       }
 
-      // Don't show snackbar for 401s if they are being handled by auth interceptor refresh
-      if (error.status !== 401 || req.url.includes('/auth/refresh')) {
+      // 401 is handled by login flow
+      if (error.status !== 401) {
          snackbar.showError(errorMessage);
       }
 

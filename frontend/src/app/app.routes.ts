@@ -1,4 +1,5 @@
 import {Routes} from '@angular/router';
+import { adminGuard, authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -23,22 +24,27 @@ export const routes: Routes = [
   },
   {
     path: 'cart',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/cart/cart.component').then(m => m.CartComponent)
   },
   {
     path: 'checkout',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/order/checkout/checkout.component').then(m => m.CheckoutComponent)
   },
   {
     path: 'order/history',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/order/order-history/order-history.component').then(m => m.OrderHistoryComponent)
   },
   {
     path: 'order/tracking/:id',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/order/order-tracking/order-tracking.component').then(m => m.OrderTrackingComponent)
   },
   {
     path: 'admin',
+    canActivate: [adminGuard],
     loadComponent: () => import('./features/admin/admin-dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent)
   }
 ];
