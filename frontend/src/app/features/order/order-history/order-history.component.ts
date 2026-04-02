@@ -72,10 +72,5 @@ import { MatIconModule } from '@angular/material/icon';
   `
 })
 export class OrderHistoryComponent {
-  // Mock data
-  orders = signal([
-    { id: 'ORD-847291', date: new Date(Date.now() - 86400000 * 2), total: 1920, status: 'Processing' },
-    { id: 'ORD-392810', date: new Date(Date.now() - 86400000 * 15), total: 4500, status: 'Delivered' },
-    { id: 'ORD-102938', date: new Date(Date.now() - 86400000 * 30), total: 1200, status: 'Delivered' }
-  ]);
+  orders = signal<any[]>([]);
 }

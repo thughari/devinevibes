@@ -5,18 +5,23 @@ import com.devinevibes.dto.product.ProductResponse;
 import com.devinevibes.entity.product.Product;
 import com.devinevibes.exception.ProductNotFoundException;
 import com.devinevibes.repository.product.ProductRepository;
+import com.devinevibes.service.storage.StorageService;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final StorageService storageService;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, StorageService storageService) {
         this.productRepository = productRepository;
+        this.storageService = storageService;
     }
 
     public List<ProductResponse> getAll() {
@@ -32,6 +37,7 @@ public class ProductService {
         product.setName(request.name());
         product.setDescription(request.description());
         product.setPrice(request.price());
+        product.setOriginalPrice(request.originalPrice());
         product.setStock(request.stock());
         applyMedia(request, product);
         return map(productRepository.save(product));
@@ -39,20 +45,51 @@ public class ProductService {
 
     public ProductResponse update(UUID id, CreateProductRequest request) {
         Product p = fetchEntity(id);
+
+        Set<String> oldMedia = new HashSet<>();
+        if (p.getImageUrl() != null && !p.getImageUrl().isBlank()) oldMedia.add(p.getImageUrl());
+        if (p.getImageUrls() != null) oldMedia.addAll(p.getImageUrls());
+        if (p.getVideoUrls() != null) oldMedia.addAll(p.getVideoUrls());
+
         p.setName(request.name());
         p.setDescription(request.description());
         p.setPrice(request.price());
+        p.setOriginalPrice(request.originalPrice());
         p.setStock(request.stock());
         applyMedia(request, p);
+
+        Set<String> newMedia = new HashSet<>();
+        if (p.getImageUrl() != null && !p.getImageUrl().isBlank()) newMedia.add(p.getImageUrl());
+        if (p.getImageUrls() != null) newMedia.addAll(p.getImageUrls());
+        if (p.getVideoUrls() != null) newMedia.addAll(p.getVideoUrls());
+
+        for (String url : oldMedia) {
+            if (!newMedia.contains(url)) {
+                storageService.deleteFile(url);
+            }
+        }
+
         return map(productRepository.save(p));
     }
 
     public void delete(UUID id) {
-        productRepository.delete(fetchEntity(id));
+        Product p = fetchEntity(id);
+        if (p.getImageUrl() != null && !p.getImageUrl().isBlank()) storageService.deleteFile(p.getImageUrl());
+        if (p.getImageUrls() != null) p.getImageUrls().forEach(storageService::deleteFile);
+        if (p.getVideoUrls() != null) p.getVideoUrls().forEach(storageService::deleteFile);
+        productRepository.delete(p);
     }
 
     public Product fetchEntity(UUID id) {
         return productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+    }
+
+    public Product reserveStock(Product product, int quantity) {
+        if (product.getStock() < quantity) {
+            throw new com.devinevibes.exception.BadRequestException("Insufficient stock for product " + product.getName());
+        }
+        product.setStock(product.getStock() - quantity);
+        return productRepository.save(product);
     }
 
     private ProductResponse map(Product p) {
@@ -62,18 +99,18 @@ public class ProductService {
         if ((thumbnail == null || thumbnail.isBlank()) && !images.isEmpty()) {
             thumbnail = images.get(0);
         }
-        return new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getStock(), thumbnail, images, videos);
+        return new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getOriginalPrice(), p.getStock(), thumbnail, images, videos);
     }
 
     private void applyMedia(CreateProductRequest request, Product product) {
         product.setImageUrl(request.imageUrl());
         if (request.imageUrls() != null) {
-            product.setImageUrls(request.imageUrls().stream().filter(u -> u != null && !u.isBlank()).toList());
+            product.setImageUrls(new java.util.ArrayList<>(request.imageUrls().stream().filter(u -> u != null && !u.isBlank()).toList()));
         } else if (request.imageUrl() != null && !request.imageUrl().isBlank()) {
-            product.setImageUrls(List.of(request.imageUrl()));
+            product.setImageUrls(new java.util.ArrayList<>(List.of(request.imageUrl())));
         }
         if (request.videoUrls() != null) {
-            product.setVideoUrls(request.videoUrls().stream().filter(u -> u != null && !u.isBlank()).toList());
+            product.setVideoUrls(new java.util.ArrayList<>(request.videoUrls().stream().filter(u -> u != null && !u.isBlank()).toList()));
         }
     }
 }

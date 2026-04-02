@@ -29,11 +29,10 @@ import { MatIconModule } from '@angular/material/icon';
             </div>
           </div>
 
-          <!-- Image -->
-          <div class="relative hidden lg:block">
+          <div class="relative mt-10 lg:mt-0">
             <div class="absolute inset-0 bg-brand-green/10 rounded-full transform translate-x-10 -translate-y-10 blur-3xl"></div>
             <img
-              src="https://picsum.photos/seed/spiritual/800/800" 
+              src="karungali.webp"
               alt="Spiritual Items" 
               referrerpolicy="no-referrer"
               class="w-full h-auto object-cover rounded-2xl shadow-2xl relative z-10 border border-amber-100"
@@ -90,7 +89,7 @@ import { MatIconModule } from '@angular/material/icon';
           <!-- Category 1 -->
           <a routerLink="/products" [queryParams]="{category: 'rudraksha'}" class="group relative bg-gradient-to-b from-white to-amber-50 rounded-2xl overflow-hidden block text-center p-6 border border-amber-100 hover:shadow-xl transition-all">
             <div class="h-56 sm:h-64 mb-6 overflow-hidden rounded-xl">
-              <img src="https://picsum.photos/seed/rudraksha/400/400" alt="Rudraksha" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+              <img src="rudraksha-maala.jpg" alt="Rudraksha" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
             </div>
             <h3 class="text-xl font-medium text-brand-dark mb-2">Rudraksha Malas</h3>
             <p class="text-sm text-brand-text mb-4">Authentic Himalayan seeds for meditation.</p>
@@ -99,16 +98,16 @@ import { MatIconModule } from '@angular/material/icon';
           <!-- Category 2 -->
           <a routerLink="/products" [queryParams]="{category: 'karungali'}" class="group relative bg-gradient-to-b from-white to-amber-50 rounded-2xl overflow-hidden block text-center p-6 border border-amber-100 hover:shadow-xl transition-all">
             <div class="h-56 sm:h-64 mb-6 overflow-hidden rounded-xl">
-              <img src="https://picsum.photos/seed/wood/400/400" alt="Karungali" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+              <img src="rudraksha.webp" alt="Rudraksha" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
             </div>
-            <h3 class="text-xl font-medium text-brand-dark mb-2">Karungali</h3>
+            <h3 class="text-xl font-medium text-brand-dark mb-2">Rudraksha</h3>
             <p class="text-sm text-brand-text mb-4">Sacred ebony wood for protection.</p>
           </a>
 
           <!-- Category 3 -->
           <a routerLink="/products" [queryParams]="{category: 'bracelets'}" class="group relative bg-gradient-to-b from-white to-amber-50 rounded-2xl overflow-hidden block text-center p-6 border border-amber-100 hover:shadow-xl transition-all">
             <div class="h-56 sm:h-64 mb-6 overflow-hidden rounded-xl">
-              <img src="https://picsum.photos/seed/bracelet/400/400" alt="Bracelets" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+              <img src="bracelet.webp" alt="Bracelets" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
             </div>
             <h3 class="text-xl font-medium text-brand-dark mb-2">Spiritual Bracelets</h3>
             <p class="text-sm text-brand-text mb-4">Daily wear for continuous energy.</p>

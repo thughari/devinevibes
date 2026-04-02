@@ -131,7 +131,7 @@ import { ApplyCouponResponse } from '../../../shared/models/coupon.model';
                 @for (item of cartItems(); track item.cartItemId) {
                 <li class="flex py-4">
                   <div class="flex-shrink-0 w-16 h-16 border border-gray-200 rounded-md overflow-hidden">
-                    <img [src]="item.imageUrl || 'https://picsum.photos/seed/' + item.productId + '/100/100'" alt="Product" class="w-full h-full object-cover" referrerpolicy="no-referrer">
+                    <img [src]="item.imageUrl || 'assets/images/placeholder-product.webp'" alt="Product" class="w-full h-full object-cover" referrerpolicy="no-referrer">
                   </div>
                   <div class="ml-4 flex-1 flex flex-col">
                     <div>

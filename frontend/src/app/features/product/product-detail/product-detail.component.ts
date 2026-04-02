@@ -34,7 +34,7 @@ import { CartService } from '../../../core/services/cart.service';
           <div class="space-y-4">
             <div class="aspect-square rounded-lg overflow-hidden bg-brand-gray border border-gray-100">
               <img
-                [src]="selectedMedia() || product()?.imageUrl || 'https://picsum.photos/seed/' + product()?.id + '/800/800'"
+                [src]="selectedMedia() || product()?.imageUrl || 'assets/images/placeholder-product.webp'"
                 [alt]="product()?.name"
                 referrerpolicy="no-referrer"
                 class="w-full h-full object-cover"
@@ -64,23 +64,28 @@ import { CartService } from '../../../core/services/cart.service';
           <!-- Product Info -->
           <div class="flex flex-col">
             <div class="mb-6">
-              <h1 class="text-3xl md:text-4xl font-sans font-bold text-brand-dark mb-4">{{ product()?.name }}</h1>
-              <div class="flex items-center gap-4 mb-6">
-                <span class="text-2xl font-bold text-brand-dark">{{ product()?.price | currency:'INR':'symbol':'1.0-0' }}</span>
-                @if (product()!.stock > 0) {
-                  <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">In Stock</span>
-                } @else {
-                  <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">Out of Stock</span>
-                }
-              </div>
-              
-              <div class="prose prose-sm max-w-none text-brand-text">
-                <p>{{ product()?.description }}</p>
-                <p class="mt-4">
-                  All our products are 100% authentic and properly energized before dispatch. 
-                  Each item comes with a certificate of authenticity.
-                </p>
-              </div>
+              @if (currentProduct) {
+                <h1 class="text-3xl md:text-4xl font-sans font-bold text-brand-dark mb-4">{{ currentProduct.name }}</h1>
+                <div class="flex items-center gap-4 mb-6">
+                  @if (currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price) {
+                    <span class="text-sm text-gray-400 line-through">{{ currentProduct.originalPrice | currency:'INR':'symbol':'1.0-0' }}</span>
+                  }
+                  <span class="text-2xl font-bold text-brand-dark">{{ currentProduct.price | currency:'INR':'symbol':'1.0-0' }}</span>
+                  @if (currentProduct.stock > 0) {
+                    <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">In Stock</span>
+                  } @else {
+                    <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">Out of Stock</span>
+                  }
+                </div>
+
+                <div class="prose prose-sm max-w-none text-brand-text">
+                  <p>{{ product()?.description }}</p>
+                  <p class="mt-4">
+                    All our products are 100% authentic and properly energized before dispatch. 
+                    Each item comes with a certificate of authenticity.
+                  </p>
+                </div>
+              }
             </div>
 
             <!-- Actions -->
@@ -171,6 +176,10 @@ export class ProductDetailComponent implements OnInit {
   isLoading = signal(true);
   quantity = signal(1);
   selectedMedia = signal<string | null>(null);
+
+  get currentProduct(): ProductResponse | null {
+    return this.product();
+  }
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {

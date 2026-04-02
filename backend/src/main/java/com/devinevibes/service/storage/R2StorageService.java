@@ -43,10 +43,17 @@ public class R2StorageService implements StorageService {
     @Override
     public String uploadFile(MultipartFile file, String userId) {
         try {
-            String key = userId + "/" + UUID.randomUUID() + "-" + file.getOriginalFilename();
-            s3Client.putObject(PutObjectRequest.builder().bucket(productBucket).key(key).build(),
+            String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+            String normalizedName = originalName.trim().replaceAll("\\s+", "-").replaceAll("[^a-zA-Z0-9._-]", "");
+            String key = (userId == null || userId.isEmpty() ? "" : userId + "/") + UUID.randomUUID() + "-" + normalizedName;
+            String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+            s3Client.putObject(PutObjectRequest.builder()
+                            .bucket(productBucket)
+                            .key(key)
+                            .contentType(contentType)
+                            .build(),
                     RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-            return productsPublicUrl + "/" + key;
+            return productsPublicUrl + "/" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new BadRequestException("Failed to upload file");
         }
@@ -57,10 +64,20 @@ public class R2StorageService implements StorageService {
         try {
             URL url = URI.create(externalUrl).toURL();
             String fileName = Paths.get(url.getPath()).getFileName().toString();
-            String key = userId + "/" + UUID.randomUUID() + "-" + fileName;
+            String normalizedName = fileName.trim().replaceAll("\\s+", "-").replaceAll("[^a-zA-Z0-9._-]", "");
+            String key = (userId == null || userId.isEmpty() ? "" : userId + "/") + UUID.randomUUID() + "-" + normalizedName;
+            String contentType = java.net.URLConnection.guessContentTypeFromName(fileName);
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
             byte[] bytes = url.openStream().readAllBytes();
-            s3Client.putObject(PutObjectRequest.builder().bucket(avatarBucket).key(key).build(), RequestBody.fromBytes(bytes));
-            return avatarPublicUrl + "/" + key;
+            s3Client.putObject(PutObjectRequest.builder()
+                            .bucket(avatarBucket)
+                            .key(key)
+                            .contentType(contentType)
+                            .build(),
+                    RequestBody.fromBytes(bytes));
+            return avatarPublicUrl + "/" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new BadRequestException("Failed to upload file from URL");
         }

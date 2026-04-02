@@ -10,6 +10,7 @@ import com.devinevibes.entity.order.PaymentStatus;
 import com.devinevibes.exception.OrderNotFoundException;
 import com.devinevibes.repository.order.OrderRepository;
 import com.devinevibes.service.cart.CartService;
+import com.devinevibes.service.product.ProductService;
 import com.devinevibes.service.user.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,12 +28,14 @@ public class OrderService {
     private final CartService cartService;
     private final UserService userService;
     private final ShiprocketClient shiprocketClient;
+    private final ProductService productService;
 
-    public OrderService(OrderRepository orderRepository, CartService cartService, UserService userService, ShiprocketClient shiprocketClient) {
+    public OrderService(OrderRepository orderRepository, CartService cartService, UserService userService, ShiprocketClient shiprocketClient, ProductService productService) {
         this.orderRepository = orderRepository;
         this.cartService = cartService;
         this.userService = userService;
         this.shiprocketClient = shiprocketClient;
+        this.productService = productService;
     }
 
     @Transactional
@@ -45,6 +48,13 @@ public class OrderService {
 
         BigDecimal total = BigDecimal.ZERO;
         for (var cart : cartItems) {
+            if (cart.getQuantity() > cart.getProduct().getStock()) {
+                throw new com.devinevibes.exception.BadRequestException("Not enough stock for product " + cart.getProduct().getName());
+            }
+
+            // Reserve stock now
+            productService.reserveStock(cart.getProduct(), cart.getQuantity());
+
             OrderItem item = new OrderItem();
             item.setOrder(order);
             item.setProduct(cart.getProduct());

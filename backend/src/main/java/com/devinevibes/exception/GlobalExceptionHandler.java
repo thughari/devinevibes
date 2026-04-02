@@ -39,6 +39,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<Map<String, Object>> build(HttpStatus status, String message) {
-        return ResponseEntity.status(status).body(Map.of("timestamp", Instant.now(), "status", status.value(), "message", message));
+        String msg = message != null ? message : "An unexpected error occurred";
+        return ResponseEntity.status(status).body(Map.of("timestamp", Instant.now(), "status", status.value(), "message", msg));
     }
 }

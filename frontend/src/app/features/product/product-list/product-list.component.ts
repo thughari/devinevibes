@@ -26,8 +26,12 @@ import { CartService } from '../../../core/services/cart.service';
         
         <!-- Filters (Mock) -->
         <div class="mt-6 md:mt-0 flex gap-4">
-          <select class="bg-white border border-gray-300 text-brand-text text-sm rounded-sm focus:ring-brand-green focus:border-brand-green block w-full p-2.5">
-            <option selected>Sort by: Featured</option>
+          <select
+            [value]="sortBy()"
+            (change)="onSortChange($event)"
+            class="bg-white border border-gray-300 text-brand-text text-sm rounded-sm focus:ring-brand-green focus:border-brand-green block w-full p-2.5"
+          >
+            <option value="featured">Sort by: Featured</option>
             <option value="price_asc">Price: Low to High</option>
             <option value="price_desc">Price: High to Low</option>
             <option value="newest">Newest Arrivals</option>
@@ -69,12 +73,34 @@ export class ProductListComponent implements OnInit {
   products = signal<ProductResponse[]>([]);
   isLoading = signal(true);
   category = signal<string | null>(null);
+  sortBy = signal<'featured' | 'price_asc' | 'price_desc' | 'newest'>('featured');
 
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
       this.category.set(params['category'] || null);
       this.fetchProducts();
     });
+  }
+
+  sortProducts(value: 'featured' | 'price_asc' | 'price_desc' | 'newest') {
+    const sorted = [...this.products()];
+    switch (value) {
+      case 'price_asc':
+        sorted.sort((a, b) => Number(a.price) - Number(b.price));
+        break;
+      case 'price_desc':
+        sorted.sort((a, b) => Number(b.price) - Number(a.price));
+        break;
+      case 'newest':
+        // If no created date exists, fall back to current order (or reverse by UUID maybe)
+        sorted.sort((a, b) => (a.id.toString() < b.id.toString() ? 1 : -1));
+        break;
+      case 'featured':
+      default:
+        // original order from API
+        break;
+    }
+    this.products.set(sorted);
   }
 
   fetchProducts() {
@@ -87,6 +113,7 @@ export class ProductListComponent implements OnInit {
     this.api.get<ProductResponse[]>('/products', params).subscribe({
       next: (data) => {
         this.products.set(data);
+        this.sortProducts(this.sortBy());
         this.isLoading.set(false);
       },
       error: () => {
@@ -95,6 +122,12 @@ export class ProductListComponent implements OnInit {
         this.snackbar.showError('Unable to load products right now.');
       }
     });
+  }
+
+  onSortChange(event: Event) {
+    const value = (event.target as HTMLSelectElement).value as 'featured' | 'price_asc' | 'price_desc' | 'newest';
+    this.sortBy.set(value);
+    this.sortProducts(value);
   }
 
   onAddToCart(product: ProductResponse) {

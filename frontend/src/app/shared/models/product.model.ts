@@ -2,6 +2,7 @@ export interface CreateProductRequest {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   stock: number;
   imageUrl?: string;
   imageUrls?: string[];
@@ -13,6 +14,7 @@ export interface ProductResponse {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   stock: number;
   imageUrl?: string;
   imageUrls?: string[];

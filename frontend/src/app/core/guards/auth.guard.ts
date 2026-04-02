@@ -6,12 +6,16 @@ export const authGuard: CanActivateFn = (_, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  // During SSR/prerender there is no browser storage; avoid false redirects.
-  if (typeof window === 'undefined') {
+  const isBrowser = typeof window !== 'undefined' && !!window.localStorage;
+  if (!isBrowser) {
+    // In server-side rendering there is no localStorage; allow navigation and let the client handle auth checks.
     return true;
   }
 
-  if (authService.isAuthenticated() || !!authService.getAccessToken()) {
+  const token = authService.getAccessToken();
+  const isAuth = authService.isAuthenticated();
+
+  if (isAuth || !!token) {
     return true;
   }
 
@@ -22,14 +26,14 @@ export const adminGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
   const user = authService.currentUser();
+  const token = authService.getAccessToken();
+  const isAuth = authService.isAuthenticated();
 
-  if (typeof window === 'undefined') {
-    return true;
-  }
-
-  if ((authService.isAuthenticated() || !!authService.getAccessToken()) && user?.role === 'ADMIN') {
+  if ((isAuth || !!token) && user?.role === 'ADMIN') {
     return true;
   }
 
   return router.createUrlTree(['/']);
 };
+
+

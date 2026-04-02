@@ -50,23 +50,33 @@ export class AuthService {
 
   getAccessToken(): string | null {
     if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem(this.TOKEN_KEY) || localStorage.getItem('token');
+      const rawToken = localStorage.getItem(this.TOKEN_KEY) || localStorage.getItem('token');
+      if (!rawToken || rawToken === 'null' || rawToken === 'undefined') {
+        return null;
+      }
+      return rawToken;
     }
     return null;
   }
 
   getRefreshToken(): string | null {
     if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+      const refreshToken = localStorage.getItem(this.REFRESH_TOKEN_KEY);
+      if (!refreshToken || refreshToken === 'null' || refreshToken === 'undefined') {
+        return null;
+      }
+      return refreshToken;
     }
     return null;
   }
 
   setTokens(auth: AuthResponse) {
     if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem(this.TOKEN_KEY, auth.accessToken);
-      localStorage.setItem(this.REFRESH_TOKEN_KEY, auth.refreshToken);
-      localStorage.removeItem('token');
+      const accessToken = auth.accessToken || '';
+      const refreshToken = auth.refreshToken || '';
+      localStorage.setItem(this.TOKEN_KEY, accessToken);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
     }
     this.isAuthenticated.set(true);
   }

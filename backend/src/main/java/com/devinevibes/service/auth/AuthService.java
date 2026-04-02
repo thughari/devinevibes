@@ -71,7 +71,7 @@ public class AuthService {
             smsService.sendOtp(request.phone(), otp);
             log.info("OTP generated for phone {} (valid 5m)", request.phone());
         } else {
-            emailService.send(request.email(), "Devine Vibes Login OTP", "Your OTP is " + otp + ". Valid for 5 minutes.");
+            emailService.sendLoginOtp(request.email(), otp);
             log.info("OTP generated for email {} (valid 5m)", request.email());
         }
     }

@@ -16,9 +16,7 @@ import { CartService } from '../../../core/services/cart.service';
           <!-- Logo -->
           <div class="flex-shrink-0 flex items-center">
             <a routerLink="/" class="flex items-center gap-2.5 group">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-[#F4E3A1] to-[#C79A2A] shadow-inner">
-                <mat-icon class="text-[#D4AF37]">self_improvement</mat-icon>
-              </div>
+              <img src="/logo.jpeg" alt="Devine Vibes" class="w-10 h-10 rounded-full object-cover" />
               <span class="font-serif text-xl sm:text-2xl font-bold tracking-wide bg-gradient-to-r from-[#8d6b1f] via-[#C79A2A] to-[#8d6b1f] bg-clip-text text-transparent">Devine Vibes</span>
             </a>
           </div>

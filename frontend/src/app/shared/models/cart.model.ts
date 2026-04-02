@@ -11,4 +11,5 @@ export interface CartItemResponse {
   unitPrice: number;
   totalPrice: number;
   imageUrl?: string;
+  availableStock: number;
 }

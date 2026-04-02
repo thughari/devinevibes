@@ -19,6 +19,12 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
   return next(authReq).pipe(
     catchError((error) => {
       if (error.status === 401 && !req.url.includes('/auth/refresh')) {
+        const refreshToken = authService.getRefreshToken();
+        if (!refreshToken) {
+          // no refresh token; do not immediately force logout, just propagate error.
+          return throwError(() => error);
+        }
+
         return authService.refreshToken().pipe(
           switchMap((res) => {
             const retryReq = req.clone({

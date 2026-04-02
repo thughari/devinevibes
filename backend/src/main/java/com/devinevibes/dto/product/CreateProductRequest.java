@@ -9,6 +9,7 @@ public record CreateProductRequest(
         @NotBlank String name,
         @NotBlank String description,
         @NotNull @DecimalMin("0.0") BigDecimal price,
+        BigDecimal originalPrice,
         @NotNull @Min(0) Integer stock,
         String imageUrl,
         List<String> imageUrls,

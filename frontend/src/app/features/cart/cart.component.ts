@@ -1,6 +1,6 @@
 import { Component, inject, computed } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, NgIf } from '@angular/common';
 import { CartItemResponse } from '../../shared/models/cart.model';
 import { SnackbarService } from '../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,7 +9,7 @@ import { CartService } from '../../core/services/cart.service';
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [RouterLink, CurrencyPipe, MatIconModule],
+  imports: [RouterLink, CurrencyPipe, MatIconModule, NgIf],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1 class="text-3xl md:text-4xl font-sans font-bold text-brand-dark mb-8">Your Sacred Cart</h1>
@@ -26,7 +26,7 @@ import { CartService } from '../../core/services/cart.service';
               @for (item of cartItems(); track item.cartItemId) {
                 <div class="flex py-6 sm:py-8">
                   <div class="flex-shrink-0">
-                    <img [src]="item.imageUrl || 'https://picsum.photos/seed/' + item.productId + '/200/200'" 
+                    <img [src]="item.imageUrl || 'assets/images/placeholder-product.webp'" 
                          [alt]="item.productName" 
                          referrerpolicy="no-referrer"
                          class="w-24 h-24 rounded-md object-cover object-center sm:w-32 sm:h-32 border border-gray-100">
@@ -51,7 +51,7 @@ import { CartService } from '../../core/services/cart.service';
                             <mat-icon class="text-sm">remove</mat-icon>
                           </button>
                           <span class="w-8 text-center text-brand-dark text-sm">{{ item.quantity }}</span>
-                          <button (click)="updateQuantity(item.cartItemId, item.quantity + 1)" class="px-2 py-1 text-brand-text hover:bg-gray-50 transition-colors">
+                          <button (click)="updateQuantity(item.cartItemId, item.quantity + 1)" class="px-2 py-1 text-brand-text hover:bg-gray-50 transition-colors" [disabled]="item.quantity >= item.availableStock">
                             <mat-icon class="text-sm">add</mat-icon>
                           </button>
                         </div>
@@ -68,7 +68,8 @@ import { CartService } from '../../core/services/cart.service';
                     <div class="mt-4 flex items-center justify-between">
                       <p class="flex items-center text-sm text-brand-text space-x-2">
                         <mat-icon class="text-brand-green text-sm">check_circle</mat-icon>
-                        <span>In stock</span>
+                        <span *ngIf="item.quantity <= item.availableStock">In stock</span>
+                        <span *ngIf="item.quantity > item.availableStock" class="text-red-500">Exceeds stock</span>
                       </p>
                       <p class="text-lg font-bold text-brand-dark">{{ item.totalPrice | currency:'INR':'symbol':'1.0-0' }}</p>
                     </div>
