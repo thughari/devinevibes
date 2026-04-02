@@ -65,22 +65,22 @@ import { CartService } from '../../../core/services/cart.service';
           <div class="flex flex-col">
             <div class="mb-6">
               @if (currentProduct) {
-                <h1 class="text-3xl md:text-4xl font-sans font-bold text-brand-dark mb-4">{{ currentProduct.name }}</h1>
-                <div class="flex items-center gap-4 mb-6">
+                <h1 class="text-3xl md:text-5xl font-serif font-bold text-brand-dark mb-4 tracking-tight leading-tight">{{ currentProduct.name }}</h1>
+                <div class="flex items-center gap-4 mb-8">
                   @if (currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price) {
-                    <span class="text-sm text-gray-400 line-through">{{ currentProduct.originalPrice | currency:'INR':'symbol':'1.0-0' }}</span>
+                    <span class="text-sm text-gray-400 line-through tracking-wider">{{ currentProduct.originalPrice | currency:'INR':'symbol':'1.0-0' }}</span>
                   }
-                  <span class="text-2xl font-bold text-brand-dark">{{ currentProduct.price | currency:'INR':'symbol':'1.0-0' }}</span>
+                  <span class="text-3xl font-sans font-medium text-brand-dark tracking-wide">{{ currentProduct.price | currency:'INR':'symbol':'1.0-0' }}</span>
                   @if (currentProduct.stock > 0) {
-                    <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">In Stock</span>
+                    <span class="px-3 py-1 rounded-sm text-[10px] font-bold bg-[#edf7f2] text-brand-green border border-brand-green/20 uppercase tracking-widest">In Stock</span>
                   } @else {
-                    <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">Out of Stock</span>
+                    <span class="px-3 py-1 rounded-sm text-[10px] font-bold bg-[#fce8e8] text-[#a33838] border border-[#a33838]/20 uppercase tracking-widest">Out of Stock</span>
                   }
                 </div>
 
-                <div class="prose prose-sm max-w-none text-brand-text">
+                <div class="prose prose-sm max-w-none text-brand-text font-light leading-relaxed">
                   <p>{{ product()?.description }}</p>
-                  <p class="mt-4">
+                  <p class="mt-4 italic">
                     All our products are 100% authentic and properly energized before dispatch. 
                     Each item comes with a certificate of authenticity.
                   </p>
@@ -90,28 +90,28 @@ import { CartService } from '../../../core/services/cart.service';
 
             <!-- Actions -->
             <div class="mt-8 pt-8 border-t border-gray-100">
-              <div class="flex items-center gap-4 mb-6">
-                <label for="quantity" class="text-sm font-medium text-brand-dark">Quantity</label>
-                <div class="flex items-center border border-gray-300 rounded-sm bg-white">
-                  <button (click)="decrementQuantity()" class="px-3 py-1 text-brand-text hover:bg-gray-50 transition-colors disabled:opacity-50" [disabled]="quantity() <= 1">
-                    <mat-icon class="text-sm">remove</mat-icon>
+              <div class="flex items-center gap-4 mb-8">
+                <label for="quantity" class="text-[11px] font-bold uppercase tracking-widest text-brand-dark">Quantity</label>
+                <div class="flex items-center border border-gray-200 rounded-sm bg-white shadow-sm overflow-hidden">
+                  <button (click)="decrementQuantity()" class="px-4 py-2 text-brand-text hover:bg-brand-gray transition-colors disabled:opacity-50" [disabled]="quantity() <= 1">
+                    <mat-icon class="text-sm w-4 h-4 leading-4 flex items-center justify-center">remove</mat-icon>
                   </button>
-                  <input type="number" id="quantity" [value]="quantity()" readonly class="w-12 text-center bg-transparent border-none focus:ring-0 text-brand-dark p-0 sm:text-sm">
-                  <button (click)="incrementQuantity()" class="px-3 py-1 text-brand-text hover:bg-gray-50 transition-colors disabled:opacity-50" [disabled]="quantity() >= product()!.stock">
-                    <mat-icon class="text-sm">add</mat-icon>
+                  <input type="number" id="quantity" [value]="quantity()" readonly class="w-12 text-center bg-transparent border-none focus:ring-0 text-brand-dark p-0 font-medium font-sans">
+                  <button (click)="incrementQuantity()" class="px-4 py-2 text-brand-text hover:bg-brand-gray transition-colors disabled:opacity-50" [disabled]="quantity() >= product()!.stock">
+                    <mat-icon class="text-sm w-4 h-4 leading-4 flex items-center justify-center">add</mat-icon>
                   </button>
                 </div>
-                <span class="text-xs text-brand-text">{{ product()?.stock }} available</span>
+                <span class="text-[10px] uppercase tracking-widest text-brand-text">{{ product()?.stock }} available</span>
               </div>
 
               <div class="flex flex-col sm:flex-row gap-4">
                 <button 
                   (click)="addToCart()"
                   [disabled]="product()?.stock === 0"
-                  class="flex-1 bg-brand-green text-white py-4 px-8 rounded-sm font-medium uppercase tracking-wider hover:bg-brand-green-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md"
+                  class="flex-1 bg-brand-green text-white py-4 px-8 rounded-full font-sans font-medium uppercase tracking-widest hover:bg-brand-gold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_4px_20px_rgba(31,122,85,0.3)] hover:shadow-[0_8px_30px_rgba(199,154,42,0.4)]"
                 >
-                  <mat-icon>shopping_cart</mat-icon>
-                  Add to Cart
+                  <mat-icon class="text-[20px] w-[20px] h-[20px]">shopping_bag</mat-icon>
+                  Add to Bag
                 </button>
                 <button 
                   class="w-full sm:w-auto border border-brand-green text-brand-green py-4 px-6 rounded-sm hover:bg-brand-green/5 transition-colors flex items-center justify-center"

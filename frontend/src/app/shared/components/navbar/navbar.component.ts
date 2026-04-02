@@ -9,68 +9,69 @@ import { CartService } from '../../../core/services/cart.service';
   standalone: true,
   imports: [RouterLink, RouterLinkActive, MatIconModule],
   template: `
-    <nav class="sticky top-0 z-40 w-full border-b border-amber-100/60 bg-white/90 backdrop-blur-lg shadow-[0_8px_30px_rgba(120,90,30,0.08)]">
+    <nav class="sticky top-0 z-40 w-full border-b border-amber-500/10 bg-white/80 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all duration-300">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16 sm:h-20">
+        <div class="flex justify-between items-center h-20 sm:h-24">
           
           <!-- Logo -->
           <div class="flex-shrink-0 flex items-center">
-            <a routerLink="/" class="flex items-center gap-2.5 group">
-              <img src="/logo.jpeg" alt="Devine Vibes" class="w-10 h-10 rounded-full object-cover" />
-              <span class="font-serif text-xl sm:text-2xl font-bold tracking-wide bg-gradient-to-r from-[#8d6b1f] via-[#C79A2A] to-[#8d6b1f] bg-clip-text text-transparent">Devine Vibes</span>
+            <a routerLink="/" class="flex items-center gap-3 group">
+              <img src="/logo.jpeg" alt="Devine Vibes" class="w-12 h-12 rounded-full object-cover shadow-sm group-hover:scale-105 transition-transform duration-500" />
+              <span class="font-serif text-2xl sm:text-3xl font-semibold tracking-wide bg-gradient-to-r from-brand-gold-light via-brand-gold to-brand-green bg-clip-text text-transparent drop-shadow-sm">Devine Vibes</span>
             </a>
           </div>
 
           <!-- Desktop Menu -->
-          <div class="hidden md:flex items-center space-x-7">
-            <a routerLink="/" routerLinkActive="text-brand-green" [routerLinkActiveOptions]="{exact: true}" class="text-brand-text hover:text-brand-green transition-colors text-sm font-medium">Home</a>
-            <a routerLink="/products" routerLinkActive="text-brand-green" class="text-brand-text hover:text-brand-green transition-colors text-sm font-medium">Store</a>
-            <a routerLink="/about" routerLinkActive="text-brand-green" class="text-brand-text hover:text-brand-green transition-colors text-sm font-medium">About Us</a>
-            <a routerLink="/contact" routerLinkActive="text-brand-green" class="text-brand-text hover:text-brand-green transition-colors text-sm font-medium">Contact Us</a>
+          <div class="hidden md:flex items-center space-x-8">
+            <a routerLink="/" routerLinkActive="text-brand-gold font-semibold" [routerLinkActiveOptions]="{exact: true}" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">Home</a>
+            <a routerLink="/products" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">Store</a>
+            <a routerLink="/about" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">About Us</a>
+            <a routerLink="/contact" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">Contact Us</a>
             @if (auth.isAuthenticated()) {
-              <a routerLink="/user/profile" routerLinkActive="text-brand-green" class="text-brand-text hover:text-brand-green transition-colors text-sm font-medium">My Account</a>
+              <a routerLink="/user/profile" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">My Account</a>
             }
           </div>
 
           <!-- Actions -->
-          <div class="flex items-center space-x-3 sm:space-x-6">
-            <a routerLink="/cart" class="flex items-center text-brand-text hover:text-brand-green transition-colors group">
-              <span class="text-brand-green font-semibold mr-1 sm:mr-2 text-xs sm:text-sm">{{ cart.count() }} items</span>
+          <div class="flex items-center space-x-4 sm:space-x-8">
+            <a routerLink="/cart" class="flex items-center text-brand-dark hover:text-brand-gold transition-colors group">
+              <span class="font-medium mr-2 text-xs sm:text-sm tracking-wide">{{ cart.count() }} items</span>
               <div class="relative">
-                <mat-icon>local_mall</mat-icon>
-                <span class="absolute -top-2 -right-2 bg-brand-green text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center group-hover:bg-brand-green-dark transition-colors">{{ cart.count() }}</span>
+                <mat-icon class="text-brand-green group-hover:text-brand-gold transition-colors duration-300">local_mall</mat-icon>
+                <span class="absolute -top-1.5 -right-2 bg-brand-gold text-white text-[9px] font-bold h-[18px] w-[18px] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">{{ cart.count() }}</span>
               </div>
             </a>
             
             @if (auth.isAuthenticated()) {
               <div class="relative group hidden md:block">
-                <button class="flex items-center text-brand-text hover:text-brand-green transition-colors">
-                  <mat-icon>person</mat-icon>
+                <button class="flex items-center text-brand-dark hover:text-brand-gold transition-colors">
+                  <mat-icon class="text-[28px]">account_circle</mat-icon>
                 </button>
                 
                 <!-- Dropdown -->
-                <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
-                  <div class="py-1">
-                    <div class="px-4 py-2 border-b border-gray-100">
-                      <p class="text-sm text-brand-dark font-medium truncate">{{ auth.currentUser()?.name || 'User' }}</p>
+                <div class="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-md border border-gray-100 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-right translate-y-2 group-hover:translate-y-0">
+                  <div class="py-2">
+                    <div class="px-5 py-3 border-b border-gray-50/50 bg-gray-50/30">
+                      <p class="text-[11px] uppercase tracking-widest text-brand-text mb-1">Signed in as</p>
+                      <p class="text-sm text-brand-dark font-serif font-semibold truncate">{{ auth.currentUser()?.name || 'User' }}</p>
                     </div>
-                    <a routerLink="/order/history" class="block px-4 py-2 text-sm text-brand-text hover:bg-gray-50 hover:text-brand-green">Orders</a>
+                    <a routerLink="/order/history" class="block px-5 py-3 text-sm text-brand-text hover:bg-brand-gray hover:text-brand-gold transition-colors flex items-center gap-2"><mat-icon class="text-[18px]">receipt_long</mat-icon> Orders</a>
                     @if (auth.currentUser()?.role === 'ADMIN') {
-                      <a routerLink="/admin" class="block px-4 py-2 text-sm text-brand-green hover:bg-gray-50">Admin Dashboard</a>
+                      <a routerLink="/admin" class="block px-5 py-3 text-sm text-brand-green font-medium hover:bg-brand-gray transition-colors flex items-center gap-2"><mat-icon class="text-[18px]">admin_panel_settings</mat-icon> Dashboard</a>
                     }
-                    <button (click)="auth.logout()" class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Logout</button>
+                    <button (click)="auth.logout()" class="block w-full text-left px-5 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"><mat-icon class="text-[18px]">logout</mat-icon> Logout</button>
                   </div>
                 </div>
               </div>
             } @else {
-              <a routerLink="/auth/login" class="hidden md:flex items-center text-brand-text hover:text-brand-green transition-colors">
-                <mat-icon>person</mat-icon>
+              <a routerLink="/auth/login" class="hidden md:flex items-center text-brand-dark hover:text-brand-gold transition-colors">
+                <mat-icon class="text-[28px]">account_circle</mat-icon>
               </a>
             }
             
             <!-- Mobile menu button -->
-            <button class="md:hidden text-brand-text hover:text-brand-green p-1 rounded-md border border-amber-100" (click)="mobileMenuOpen.set(!mobileMenuOpen())">
-              <mat-icon>{{ mobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
+            <button class="md:hidden text-brand-dark hover:text-brand-gold transition-colors" (click)="mobileMenuOpen.set(!mobileMenuOpen())">
+              <mat-icon class="text-[28px]">{{ mobileMenuOpen() ? 'close' : 'menu_open' }}</mat-icon>
             </button>
           </div>
         </div>
@@ -78,17 +79,20 @@ import { CartService } from '../../../core/services/cart.service';
 
       <!-- Mobile Menu -->
       @if (mobileMenuOpen()) {
-        <div class="md:hidden bg-white border-t border-amber-100 shadow-inner">
-          <div class="px-4 pt-3 pb-5 space-y-1.5">
-            <a routerLink="/" class="block px-3 py-2.5 text-base font-medium text-brand-text hover:text-brand-green hover:bg-amber-50 rounded-lg">Home</a>
-            <a routerLink="/products" class="block px-3 py-2.5 text-base font-medium text-brand-text hover:text-brand-green hover:bg-amber-50 rounded-lg">Store</a>
-            <a routerLink="/about" class="block px-3 py-2.5 text-base font-medium text-brand-text hover:text-brand-green hover:bg-amber-50 rounded-lg">About Us</a>
-            <a routerLink="/contact" class="block px-3 py-2.5 text-base font-medium text-brand-text hover:text-brand-green hover:bg-amber-50 rounded-lg">Contact Us</a>
+        <div class="md:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-xl absolute w-full left-0">
+          <div class="px-6 pt-5 pb-8 space-y-2">
+            <a routerLink="/" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Home</a>
+            <a routerLink="/products" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Store</a>
+            <a routerLink="/about" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">About Us</a>
+            <a routerLink="/contact" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Contact Us</a>
             @if (auth.isAuthenticated()) {
-              <a routerLink="/user/profile" class="block px-3 py-2.5 text-base font-medium text-brand-text hover:text-brand-green hover:bg-amber-50 rounded-lg">My Account</a>
-              <button (click)="auth.logout()" class="block w-full text-left px-3 py-2.5 text-base font-medium text-red-500 hover:bg-red-50 rounded-lg">Logout</button>
+              <div class="h-px w-full bg-gray-100 my-4"></div>
+              <p class="px-4 py-2 text-xs uppercase tracking-widest text-brand-text">{{ auth.currentUser()?.name }}</p>
+              <a routerLink="/user/profile" class="block px-4 py-3 text-base font-medium text-brand-dark hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">My Account</a>
+              <button (click)="auth.logout()" class="block w-full text-left px-4 py-3 text-base font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all">Logout</button>
             } @else {
-              <a routerLink="/auth/login" class="block px-3 py-2.5 text-base font-medium text-brand-green hover:bg-amber-50 rounded-lg">Sign In</a>
+              <div class="h-px w-full bg-gray-100 my-4"></div>
+              <a routerLink="/auth/login" class="block px-4 py-3 text-center text-sm uppercase tracking-widest font-bold text-white bg-brand-green hover:bg-brand-green-dark rounded-xl transition-all shadow-md">Sign In</a>
             }
           </div>
         </div>
