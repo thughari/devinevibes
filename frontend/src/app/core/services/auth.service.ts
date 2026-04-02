@@ -29,7 +29,16 @@ export class AuthService {
       if (token) {
         this.isAuthenticated.set(true);
         this.fetchProfile().subscribe({
-          error: () => this.logout()
+          error: () => {
+            this.refreshToken().subscribe({
+              next: () => {
+                this.fetchProfile().subscribe({
+                  error: () => this.logout()
+                });
+              },
+              error: () => this.logout()
+            });
+          }
         });
       }
     }

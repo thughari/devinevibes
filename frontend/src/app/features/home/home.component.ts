@@ -8,21 +8,22 @@ import { MatIconModule } from '@angular/material/icon';
   imports: [RouterLink, MatIconModule],
   template: `
     <!-- Hero Section -->
-    <section class="relative bg-brand-gray py-20 lg:py-32 overflow-hidden">
+    <section class="relative bg-gradient-to-b from-amber-50 via-white to-white py-14 sm:py-20 lg:py-28 overflow-hidden">
+      <div class="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(circle_at_top_right,_#f5d98a_0%,_transparent_30%),radial-gradient(circle_at_bottom_left,_#cce8da_0%,_transparent_30%)]"></div>
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           
           <!-- Text Content -->
           <div class="text-left">
-            <h2 class="text-brand-dark font-medium tracking-wider uppercase text-sm mb-4">Welcome to Devine Vibes</h2>
-            <h1 class="text-5xl md:text-6xl lg:text-7xl font-sans font-bold text-brand-dark mb-6 leading-tight">
+            <h2 class="text-[#9b7a2d] font-semibold tracking-[0.24em] uppercase text-xs sm:text-sm mb-4">Welcome to Devine Vibes</h2>
+            <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-sans font-bold text-brand-dark mb-6 leading-tight">
               Sacred Adornments for <br/> Inner Peace
             </h1>
-            <p class="text-lg text-brand-text mb-10 max-w-lg font-light leading-relaxed">
+            <p class="text-base sm:text-lg text-brand-text mb-8 sm:mb-10 max-w-lg font-light leading-relaxed">
               Discover our curated collection of authentic Rudraksha, Karungali, and spiritual accessories designed to elevate your daily practice.
             </p>
             <div class="flex flex-col sm:flex-row items-start gap-4">
-              <a routerLink="/products" class="px-8 py-4 bg-brand-green text-white font-medium uppercase tracking-wider hover:bg-brand-green-dark transition-colors rounded-sm inline-block">
+              <a routerLink="/products" class="px-7 py-3.5 bg-gradient-to-r from-[#1f7a55] to-[#2f8e68] text-white font-medium uppercase tracking-wider hover:shadow-xl transition-all rounded-md inline-block">
                 Shop Now
               </a>
             </div>
@@ -31,11 +32,11 @@ import { MatIconModule } from '@angular/material/icon';
           <!-- Image -->
           <div class="relative hidden lg:block">
             <div class="absolute inset-0 bg-brand-green/10 rounded-full transform translate-x-10 -translate-y-10 blur-3xl"></div>
-            <img 
+            <img
               src="https://picsum.photos/seed/spiritual/800/800" 
               alt="Spiritual Items" 
               referrerpolicy="no-referrer"
-              class="w-full h-auto object-cover rounded-lg shadow-2xl relative z-10"
+              class="w-full h-auto object-cover rounded-2xl shadow-2xl relative z-10 border border-amber-100"
             />
           </div>
         </div>
@@ -78,17 +79,17 @@ import { MatIconModule } from '@angular/material/icon';
     </section>
 
     <!-- Featured Categories -->
-    <section class="py-24 bg-white">
+    <section class="py-16 sm:py-24 bg-white">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <h2 class="text-3xl md:text-4xl font-sans font-bold text-brand-dark mb-4">Sacred Collections</h2>
           <div class="w-16 h-1 bg-brand-green mx-auto"></div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           <!-- Category 1 -->
-          <a routerLink="/products" [queryParams]="{category: 'rudraksha'}" class="group relative bg-brand-gray rounded-lg overflow-hidden block text-center p-8">
-            <div class="h-64 mb-6 overflow-hidden rounded-md">
+          <a routerLink="/products" [queryParams]="{category: 'rudraksha'}" class="group relative bg-gradient-to-b from-white to-amber-50 rounded-2xl overflow-hidden block text-center p-6 border border-amber-100 hover:shadow-xl transition-all">
+            <div class="h-56 sm:h-64 mb-6 overflow-hidden rounded-xl">
               <img src="https://picsum.photos/seed/rudraksha/400/400" alt="Rudraksha" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
             </div>
             <h3 class="text-xl font-medium text-brand-dark mb-2">Rudraksha Malas</h3>
@@ -96,8 +97,8 @@ import { MatIconModule } from '@angular/material/icon';
           </a>
 
           <!-- Category 2 -->
-          <a routerLink="/products" [queryParams]="{category: 'karungali'}" class="group relative bg-brand-gray rounded-lg overflow-hidden block text-center p-8">
-            <div class="h-64 mb-6 overflow-hidden rounded-md">
+          <a routerLink="/products" [queryParams]="{category: 'karungali'}" class="group relative bg-gradient-to-b from-white to-amber-50 rounded-2xl overflow-hidden block text-center p-6 border border-amber-100 hover:shadow-xl transition-all">
+            <div class="h-56 sm:h-64 mb-6 overflow-hidden rounded-xl">
               <img src="https://picsum.photos/seed/wood/400/400" alt="Karungali" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
             </div>
             <h3 class="text-xl font-medium text-brand-dark mb-2">Karungali</h3>
@@ -105,8 +106,8 @@ import { MatIconModule } from '@angular/material/icon';
           </a>
 
           <!-- Category 3 -->
-          <a routerLink="/products" [queryParams]="{category: 'bracelets'}" class="group relative bg-brand-gray rounded-lg overflow-hidden block text-center p-8">
-            <div class="h-64 mb-6 overflow-hidden rounded-md">
+          <a routerLink="/products" [queryParams]="{category: 'bracelets'}" class="group relative bg-gradient-to-b from-white to-amber-50 rounded-2xl overflow-hidden block text-center p-6 border border-amber-100 hover:shadow-xl transition-all">
+            <div class="h-56 sm:h-64 mb-6 overflow-hidden rounded-xl">
               <img src="https://picsum.photos/seed/bracelet/400/400" alt="Bracelets" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
             </div>
             <h3 class="text-xl font-medium text-brand-dark mb-2">Spiritual Bracelets</h3>
