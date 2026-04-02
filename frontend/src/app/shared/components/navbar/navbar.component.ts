@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatIconModule } from '@angular/material/icon';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-navbar',
@@ -36,10 +37,10 @@ import { MatIconModule } from '@angular/material/icon';
           <!-- Actions -->
           <div class="flex items-center space-x-3 sm:space-x-6">
             <a routerLink="/cart" class="flex items-center text-brand-text hover:text-brand-green transition-colors group">
-              <span class="text-brand-green font-semibold mr-1 sm:mr-2 text-xs sm:text-sm">$0.00</span>
+              <span class="text-brand-green font-semibold mr-1 sm:mr-2 text-xs sm:text-sm">{{ cart.count() }} items</span>
               <div class="relative">
                 <mat-icon>local_mall</mat-icon>
-                <span class="absolute -top-2 -right-2 bg-brand-green text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center group-hover:bg-brand-green-dark transition-colors">0</span>
+                <span class="absolute -top-2 -right-2 bg-brand-green text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center group-hover:bg-brand-green-dark transition-colors">{{ cart.count() }}</span>
               </div>
             </a>
             
@@ -99,5 +100,6 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class NavbarComponent {
   auth = inject(AuthService);
+  cart = inject(CartService);
   mobileMenuOpen = signal(false);
 }

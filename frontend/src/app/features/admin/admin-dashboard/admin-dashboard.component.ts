@@ -5,11 +5,12 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { ApiService } from '../../../core/services/api.service';
 import { ProductResponse } from '../../../shared/models/product.model';
 import { OrderResponse } from '../../../shared/models/order.model';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CurrencyPipe, MatIconModule],
+  imports: [CurrencyPipe, MatIconModule, ReactiveFormsModule],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="flex justify-between items-center mb-8">
@@ -18,6 +19,20 @@ import { OrderResponse } from '../../../shared/models/order.model';
           <mat-icon class="text-[20px]">add</mat-icon> Add Product
         </button>
       </div>
+
+      @if (showAddProduct()) {
+        <form [formGroup]="addProductForm" (ngSubmit)="submitProduct()" class="bg-white border border-gray-200 rounded-xl p-4 mb-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input formControlName="name" placeholder="Product name" class="border rounded-md px-3 py-2" />
+          <input formControlName="price" type="number" placeholder="Price" class="border rounded-md px-3 py-2" />
+          <input formControlName="stock" type="number" placeholder="Stock" class="border rounded-md px-3 py-2" />
+          <input formControlName="imageUrl" placeholder="Image URL" class="border rounded-md px-3 py-2" />
+          <textarea formControlName="description" placeholder="Description" class="md:col-span-2 border rounded-md px-3 py-2 min-h-24"></textarea>
+          <div class="md:col-span-2 flex gap-2">
+            <button type="submit" [disabled]="addProductForm.invalid" class="bg-dv-green text-white px-4 py-2 rounded-md">Create Product</button>
+            <button type="button" (click)="showAddProduct.set(false)" class="border px-4 py-2 rounded-md">Cancel</button>
+          </div>
+        </form>
+      }
 
       <!-- Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -156,10 +171,19 @@ import { OrderResponse } from '../../../shared/models/order.model';
 export class AdminDashboardComponent {
   private api = inject(ApiService);
   private snackbar = inject(SnackbarService);
+  private fb = inject(FormBuilder);
   activeTab = signal<'products' | 'orders'>('products');
+  showAddProduct = signal(false);
   isLoading = signal(false);
   products = signal<ProductResponse[]>([]);
   orders = signal<OrderResponse[]>([]);
+  addProductForm = this.fb.group({
+    name: ['', Validators.required],
+    description: ['', Validators.required],
+    price: [0, [Validators.required, Validators.min(0)]],
+    stock: [0, [Validators.required, Validators.min(0)]],
+    imageUrl: ['']
+  });
 
   constructor() {
     this.loadDashboardData();
@@ -186,7 +210,7 @@ export class AdminDashboardComponent {
   }
 
   addProduct() {
-    this.snackbar.showInfo('Add Product functionality coming soon!');
+    this.showAddProduct.set(true);
   }
 
   editProduct(id: string) {
@@ -205,5 +229,18 @@ export class AdminDashboardComponent {
 
   viewOrderDetails(orderId: string) {
     this.snackbar.showInfo(`Viewing details for order ${orderId}`);
+  }
+
+  submitProduct() {
+    if (this.addProductForm.invalid) return;
+    this.api.post<ProductResponse>('/admin/products', this.addProductForm.value).subscribe({
+      next: (product) => {
+        this.products.update(items => [product, ...items]);
+        this.showAddProduct.set(false);
+        this.addProductForm.reset({ name: '', description: '', price: 0, stock: 0, imageUrl: '' });
+        this.snackbar.showSuccess('Product created successfully.');
+      },
+      error: () => this.snackbar.showError('Unable to create product.')
+    });
   }
 }

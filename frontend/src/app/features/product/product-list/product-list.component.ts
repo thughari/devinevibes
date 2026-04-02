@@ -7,6 +7,7 @@ import { HttpParams } from '@angular/common/http';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
 import { TitleCasePipe } from '@angular/common';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-product-list',
@@ -63,6 +64,7 @@ export class ProductListComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private snackbar = inject(SnackbarService);
+  private cartService = inject(CartService);
 
   products = signal<ProductResponse[]>([]);
   isLoading = signal(true);
@@ -88,22 +90,15 @@ export class ProductListComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        // Mock data for demo
-        this.products.set([
-          { id: '1', name: '5 Mukhi Rudraksha Mala', description: 'Authentic 5 Mukhi Rudraksha Mala from Nepal. 108+1 beads.', price: 1500, stock: 10, imageUrl: 'https://picsum.photos/seed/mala1/400/400' },
-          { id: '2', name: 'Karungali Mala', description: 'Original Karungali (Ebony Wood) Mala. 108 beads, 8mm.', price: 2200, stock: 5, imageUrl: 'https://picsum.photos/seed/karungali/400/400' },
-          { id: '3', name: '7 Mukhi Rudraksha', description: 'Single bead 7 Mukhi Rudraksha with silver capping.', price: 3500, stock: 2, imageUrl: 'https://picsum.photos/seed/rudraksha7/400/400' },
-          { id: '4', name: 'Sphatik Mala', description: 'Clear Quartz Crystal Mala for meditation.', price: 1200, stock: 15, imageUrl: 'https://picsum.photos/seed/sphatik/400/400' },
-          { id: '5', name: 'Tulsi Mala', description: 'Sacred Tulsi wood mala for daily wear.', price: 450, stock: 50, imageUrl: 'https://picsum.photos/seed/tulsi/400/400' },
-          { id: '6', name: 'Gauri Shankar Rudraksha', description: 'Rare naturally joined Rudraksha representing Shiva and Parvati.', price: 15000, stock: 1, imageUrl: 'https://picsum.photos/seed/gauri/400/400' },
-        ]);
+        this.products.set([]);
         this.isLoading.set(false);
+        this.snackbar.showError('Unable to load products right now.');
       }
     });
   }
 
   onAddToCart(product: ProductResponse) {
-    // In a real app, call CartService
+    this.cartService.addToCart(product, 1);
     this.snackbar.showSuccess(`Added ${product.name} to cart`);
   }
 }

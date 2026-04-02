@@ -1,9 +1,10 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { CartItemResponse } from '../../shared/models/cart.model';
 import { SnackbarService } from '../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
+import { CartService } from '../../core/services/cart.service';
 
 @Component({
   selector: 'app-cart',
@@ -140,14 +141,10 @@ import { MatIconModule } from '@angular/material/icon';
 export class CartComponent {
   private snackbar = inject(SnackbarService);
   private router = inject(Router);
+  private cartService = inject(CartService);
 
-  isLoading = signal(false);
-  
-  // Mock data
-  cartItems = signal<CartItemResponse[]>([
-    { cartItemId: 'c1', productId: '1', productName: '5 Mukhi Rudraksha Mala', quantity: 1, unitPrice: 1500, totalPrice: 1500, imageUrl: 'https://picsum.photos/seed/1/200/200' },
-    { cartItemId: 'c2', productId: '2', productName: 'Karungali Mala', quantity: 2, unitPrice: 2200, totalPrice: 4400, imageUrl: 'https://picsum.photos/seed/2/200/200' }
-  ]);
+  isLoading = this.cartService.isLoading;
+  cartItems = this.cartService.items;
 
   subtotal = computed(() => this.cartItems().reduce((sum, item) => sum + item.totalPrice, 0));
   shipping = computed(() => this.subtotal() > 5000 ? 0 : 150);
@@ -156,20 +153,16 @@ export class CartComponent {
 
   updateQuantity(cartItemId: string, newQuantity: number) {
     if (newQuantity < 1) return;
-    
-    this.cartItems.update(items => 
-      items.map(item => {
-        if (item.cartItemId === cartItemId) {
-          return { ...item, quantity: newQuantity, totalPrice: item.unitPrice * newQuantity };
-        }
-        return item;
-      })
-    );
+    const item = this.cartItems().find(i => i.cartItemId === cartItemId);
+    if (item) this.cartService.updateQuantity(item, newQuantity);
   }
 
   removeItem(cartItemId: string) {
-    this.cartItems.update(items => items.filter(item => item.cartItemId !== cartItemId));
-    this.snackbar.showInfo('Item removed from cart');
+    const item = this.cartItems().find(i => i.cartItemId === cartItemId);
+    if (item) {
+      this.cartService.removeItem(item);
+      this.snackbar.showInfo('Item removed from cart');
+    }
   }
 
   checkout() {

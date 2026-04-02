@@ -5,10 +5,13 @@ import com.devinevibes.dto.cart.CartItemResponse;
 import com.devinevibes.service.cart.CartService;
 import com.devinevibes.util.SecurityUtils;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/cart")
@@ -29,5 +32,18 @@ public class CartController {
     @GetMapping
     public ResponseEntity<List<CartItemResponse>> get() {
         return ResponseEntity.ok(cartService.get(SecurityUtils.currentPrincipalEmail()));
+    }
+
+    @PutMapping("/{cartItemId}")
+    public ResponseEntity<Void> updateQuantity(@PathVariable UUID cartItemId,
+                                               @RequestParam @NotNull @Min(1) Integer quantity) {
+        cartService.updateQuantity(SecurityUtils.currentPrincipalEmail(), cartItemId, quantity);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{cartItemId}")
+    public ResponseEntity<Void> remove(@PathVariable UUID cartItemId) {
+        cartService.remove(SecurityUtils.currentPrincipalEmail(), cartItemId);
+        return ResponseEntity.noContent().build();
     }
 }

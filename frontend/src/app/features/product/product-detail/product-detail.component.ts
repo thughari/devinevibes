@@ -5,6 +5,7 @@ import { ProductResponse } from '../../../shared/models/product.model';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { CurrencyPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -157,6 +158,7 @@ export class ProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
   private snackbar = inject(SnackbarService);
+  private cartService = inject(CartService);
 
   product = signal<ProductResponse | null>(null);
   isLoading = signal(true);
@@ -179,18 +181,8 @@ export class ProductDetailComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: () => {
-        // Mock data for demo
-        setTimeout(() => {
-          this.product.set({ 
-            id: id, 
-            name: 'Premium 5 Mukhi Rudraksha Mala', 
-            description: 'This authentic 5 Mukhi Rudraksha Mala from Nepal consists of 108+1 carefully selected beads. Five Mukhi Rudraksha is governed by the planet Jupiter and is known to bring peace, good health, and spiritual growth to the wearer. It is the most widely used Rudraksha for chanting mantras and daily wear.', 
-            price: 1500, 
-            stock: 10, 
-            imageUrl: `https://picsum.photos/seed/${id}/800/800` 
-          });
-          this.isLoading.set(false);
-        }, 500);
+        this.product.set(null);
+        this.isLoading.set(false);
       }
     });
   }
@@ -209,7 +201,7 @@ export class ProductDetailComponent implements OnInit {
 
   addToCart() {
     if (this.product()) {
-      // In real app, call CartService
+      this.cartService.addToCart(this.product()!, this.quantity());
       this.snackbar.showSuccess(`Added ${this.quantity()}x ${this.product()!.name} to cart`);
     }
   }

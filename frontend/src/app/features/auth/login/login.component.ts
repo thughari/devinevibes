@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { CartService } from '../../../core/services/cart.service';
 import { Router, RouterLink } from '@angular/router';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
@@ -173,6 +174,7 @@ declare global {
 export class LoginComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private cartService = inject(CartService);
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
 
@@ -229,6 +231,7 @@ export class LoginComponent {
       this.authService.verifyOtp({ phone, email, name, otp }).subscribe({
         next: () => {
           this.isLoading.set(false);
+          this.cartService.mergeGuestCartAfterLogin();
           this.snackbar.showSuccess('Login successful');
           this.router.navigate(['/']);
         },
@@ -257,6 +260,7 @@ export class LoginComponent {
           callback: ({ credential }) => {
             this.authService.loginWithGoogle({ idToken: credential }).subscribe({
               next: () => {
+                this.cartService.mergeGuestCartAfterLogin();
                 this.snackbar.showSuccess('Google login successful');
                 this.router.navigate(['/']);
               }

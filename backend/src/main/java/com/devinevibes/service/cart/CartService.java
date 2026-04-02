@@ -40,8 +40,23 @@ public class CartService {
         return cartRepository.findByUser(user).stream().map(item -> {
             BigDecimal total = item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             return new CartItemResponse(item.getId(), item.getProduct().getId(), item.getProduct().getName(),
-                    item.getQuantity(), item.getProduct().getPrice(), total);
+                    item.getQuantity(), item.getProduct().getPrice(), total, item.getProduct().getImageUrl());
         }).toList();
+    }
+
+    public void updateQuantity(String email, java.util.UUID cartItemId, Integer quantity) {
+        User user = userService.getByEmail(email);
+        CartItem item = cartRepository.findByIdAndUser(cartItemId, user)
+                .orElseThrow(() -> new IllegalArgumentException("Cart item not found"));
+        item.setQuantity(quantity);
+        cartRepository.save(item);
+    }
+
+    public void remove(String email, java.util.UUID cartItemId) {
+        User user = userService.getByEmail(email);
+        CartItem item = cartRepository.findByIdAndUser(cartItemId, user)
+                .orElseThrow(() -> new IllegalArgumentException("Cart item not found"));
+        cartRepository.delete(item);
     }
 
     public List<CartItem> fetchItems(String email) {
