@@ -33,8 +33,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         }
       }
 
-      // 401 is handled by login flow
-      if (error.status !== 401) {
+      // suppress 401 toast when refresh workflow handles it
+      if (error.status !== 401 || req.url.includes('/auth/refresh')) {
          snackbar.showError(errorMessage);
       }
 

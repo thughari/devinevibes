@@ -66,6 +66,19 @@ public class JwtUtils {
         return Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody().get("role", String.class);
     }
 
+    public boolean validateRefreshToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder().setSigningKey(getRefreshSigningKey()).build().parseClaimsJws(token).getBody();
+            return activeProfile.equals(claims.get("env", String.class));
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    public String getEmailFromRefreshToken(String token) {
+        return Jwts.parserBuilder().setSigningKey(getRefreshSigningKey()).build().parseClaimsJws(token).getBody().getSubject();
+    }
+
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }

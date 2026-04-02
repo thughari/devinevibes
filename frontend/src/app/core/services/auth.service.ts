@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiService } from './api.service';
 import { AuthResponse, GoogleLoginRequest, OtpRequest, OtpVerifyRequest } from '../../shared/models/auth.model';
-import { UserProfileResponse } from '../../shared/models/user.model';
+import { UpdateUserProfileRequest, UserProfileResponse } from '../../shared/models/user.model';
 import { tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
 import { Router } from '@angular/router';
@@ -75,8 +75,8 @@ export class AuthService {
     );
   }
 
-  register(): Observable<never> {
-    return throwError(() => new Error('Email/password registration is not enabled. Please use OTP or Google login.'));
+  register(data: OtpRequest): Observable<unknown> {
+    return this.requestOtp(data);
   }
 
   requestOtp(data: OtpRequest): Observable<unknown> {
@@ -92,8 +92,24 @@ export class AuthService {
     );
   }
 
+  refreshToken(): Observable<AuthResponse> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      return throwError(() => new Error('No refresh token available'));
+    }
+    return this.api.post<AuthResponse>('/auth/refresh', { refreshToken }).pipe(
+      tap(res => this.setTokens(res))
+    );
+  }
+
   fetchProfile(): Observable<UserProfileResponse> {
     return this.api.get<UserProfileResponse>('/user/me').pipe(
+      tap(profile => this.currentUser.set(profile))
+    );
+  }
+
+  updateProfile(data: UpdateUserProfileRequest): Observable<UserProfileResponse> {
+    return this.api.put<UserProfileResponse>('/user/me', data).pipe(
       tap(profile => this.currentUser.set(profile))
     );
   }

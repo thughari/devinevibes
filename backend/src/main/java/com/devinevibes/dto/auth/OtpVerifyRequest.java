@@ -1,5 +1,3 @@
 package com.devinevibes.dto.auth;
 
-import jakarta.validation.constraints.NotBlank;
-
-public record OtpVerifyRequest(@NotBlank String phone, @NotBlank String otp) {}
+public record OtpVerifyRequest(String phone, String email, String otp, String name) {}

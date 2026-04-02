@@ -1,11 +1,15 @@
 package com.devinevibes.controller.user;
 
 import com.devinevibes.dto.user.UserProfileResponse;
+import com.devinevibes.dto.user.UpdateUserProfileRequest;
 import com.devinevibes.entity.user.User;
 import com.devinevibes.service.user.UserService;
 import com.devinevibes.util.SecurityUtils;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,6 +27,13 @@ public class UserController {
     public ResponseEntity<UserProfileResponse> me() {
         User user = userService.getByEmail(SecurityUtils.currentPrincipalEmail());
         return ResponseEntity.ok(new UserProfileResponse(user.getId(), user.getName(), user.getEmail(), user.getPhone(),
-                user.getProfileImageUrl(), user.getProvider(), user.getRole()));
+                user.getProfileImageUrl(), user.getProvider(), user.getRole(), user.getCreatedAt()));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserProfileResponse> update(@Valid @RequestBody UpdateUserProfileRequest request) {
+        User user = userService.updateProfile(SecurityUtils.currentPrincipalEmail(), request);
+        return ResponseEntity.ok(new UserProfileResponse(user.getId(), user.getName(), user.getEmail(), user.getPhone(),
+                user.getProfileImageUrl(), user.getProvider(), user.getRole(), user.getCreatedAt()));
     }
 }

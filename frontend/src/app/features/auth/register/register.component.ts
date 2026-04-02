@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl } from '@
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/services/auth.service';
+import { SnackbarService } from '../../../shared/services/snackbar.service';
 
 @Component({
   selector: 'app-register',
@@ -174,6 +175,7 @@ export class RegisterComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private snackbar = inject(SnackbarService);
 
   showPassword = signal(false);
   isLoading = signal(false);
@@ -200,9 +202,13 @@ export class RegisterComponent {
       this.isLoading.set(true);
       this.error.set(null);
       
-      this.authService.register().subscribe({
+      this.authService.register({
+        name: this.registerForm.value.name || '',
+        email: this.registerForm.value.email || undefined
+      }).subscribe({
         next: () => {
-          this.router.navigate(['/']);
+          this.snackbar.showSuccess('Verification OTP sent. Please login to complete verification.');
+          this.router.navigate(['/auth/login']);
         },
         error: (err) => {
           this.error.set(err.message || 'Registration failed. Please try again.');

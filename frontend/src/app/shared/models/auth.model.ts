@@ -9,10 +9,18 @@ export interface GoogleLoginRequest {
 }
 
 export interface OtpRequest {
-  phone: string;
+  phone?: string;
+  email?: string;
+  name?: string;
 }
 
 export interface OtpVerifyRequest {
-  phone: string;
+  phone?: string;
+  email?: string;
   otp: string;
+  name?: string;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
 }

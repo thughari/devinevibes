@@ -39,7 +39,22 @@ declare global {
         </div>
 
         @if (!otpSent()) {
-          <form class="mt-8 space-y-6" [formGroup]="phoneForm" (ngSubmit)="requestOtp()">
+          <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-md">
+            <button type="button" (click)="switchMode('phone')" [class.bg-white]="mode() === 'phone'" class="py-2 rounded text-sm font-medium">Phone OTP</button>
+            <button type="button" (click)="switchMode('email')" [class.bg-white]="mode() === 'email'" class="py-2 rounded text-sm font-medium">Email OTP</button>
+          </div>
+          <form class="mt-8 space-y-6" [formGroup]="mode() === 'phone' ? phoneForm : emailForm" (ngSubmit)="requestOtp()">
+            <div>
+              <label for="name" class="block text-sm font-medium text-brand-dark mb-2">Full Name</label>
+              <input
+                id="name"
+                type="text"
+                formControlName="name"
+                class="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 bg-white text-brand-dark placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-green focus:border-brand-green sm:text-sm transition-colors"
+                placeholder="Enter your full name"
+              >
+            </div>
+            @if (mode() === 'phone') {
             <div>
               <label for="phone" class="block text-sm font-medium text-brand-dark mb-2">Phone Number</label>
               <div class="relative">
@@ -57,11 +72,26 @@ declare global {
                 <p class="mt-2 text-xs text-red-500">Please enter a valid 10-digit phone number.</p>
               }
             </div>
+            } @else {
+            <div>
+              <label for="email" class="block text-sm font-medium text-brand-dark mb-2">Email Address</label>
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                class="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 bg-white text-brand-dark placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-green focus:border-brand-green sm:text-sm transition-colors"
+                placeholder="you@example.com"
+              >
+              @if (emailForm.get('email')?.touched && emailForm.get('email')?.invalid) {
+                <p class="mt-2 text-xs text-red-500">Please enter a valid email address.</p>
+              }
+            </div>
+            }
 
             <div>
               <button 
                 type="submit" 
-                [disabled]="phoneForm.invalid || isLoading()"
+                [disabled]="(mode() === 'phone' ? phoneForm.invalid : emailForm.invalid) || isLoading()"
                 class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-brand-green hover:bg-brand-green-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-wider shadow-md"
               >
                 @if (isLoading()) {
@@ -106,7 +136,7 @@ declare global {
           <form class="mt-8 space-y-6" [formGroup]="otpForm" (ngSubmit)="verifyOtp()">
             <div>
               <label for="otp" class="block text-sm font-medium text-brand-dark mb-2">Enter OTP</label>
-              <p class="text-xs text-brand-text mb-4">Sent to +91 {{ phoneForm.value.phone }} <button type="button" (click)="otpSent.set(false)" class="text-brand-green hover:underline ml-2">Change</button></p>
+              <p class="text-xs text-brand-text mb-4">Sent to {{ mode() === 'phone' ? ('+91 ' + phoneForm.value.phone) : emailForm.value.email }} <button type="button" (click)="otpSent.set(false)" class="text-brand-green hover:underline ml-2">Change</button></p>
               <input 
                 id="otp" 
                 type="text" 
@@ -147,22 +177,33 @@ export class LoginComponent {
   private snackbar = inject(SnackbarService);
 
   phoneForm = this.fb.group({
+    name: ['', [Validators.required, Validators.minLength(2)]],
     phone: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]]
+  });
+
+  emailForm = this.fb.group({
+    name: ['', [Validators.required, Validators.minLength(2)]],
+    email: ['', [Validators.required, Validators.email]]
   });
 
   otpForm = this.fb.group({
     otp: ['', [Validators.required, Validators.pattern('^[0-9]{6}$')]]
   });
 
+  mode = signal<'phone' | 'email'>('phone');
   otpSent = signal(false);
   isLoading = signal(false);
 
   requestOtp() {
-    if (this.phoneForm.valid) {
+    const isPhoneMode = this.mode() === 'phone';
+    const form = isPhoneMode ? this.phoneForm : this.emailForm;
+    if (form.valid) {
       this.isLoading.set(true);
-      const phone = this.phoneForm.value.phone!;
-      
-      this.authService.requestOtp({ phone }).subscribe({
+      const name = form.value.name!;
+      const phone = this.phoneForm.value.phone || undefined;
+      const email = this.emailForm.value.email || undefined;
+
+      this.authService.requestOtp({ phone, email, name }).subscribe({
         next: () => {
           this.otpSent.set(true);
           this.isLoading.set(false);
@@ -177,12 +218,15 @@ export class LoginComponent {
   }
 
   verifyOtp() {
-    if (this.otpForm.valid && this.phoneForm.valid) {
+    const form = this.mode() === 'phone' ? this.phoneForm : this.emailForm;
+    if (this.otpForm.valid && form.valid) {
       this.isLoading.set(true);
-      const phone = this.phoneForm.value.phone!;
+      const phone = this.phoneForm.value.phone || undefined;
+      const email = this.emailForm.value.email || undefined;
+      const name = form.value.name!;
       const otp = this.otpForm.value.otp!;
       
-      this.authService.verifyOtp({ phone, otp }).subscribe({
+      this.authService.verifyOtp({ phone, email, name, otp }).subscribe({
         next: () => {
           this.isLoading.set(false);
           this.snackbar.showSuccess('Login successful');
@@ -249,5 +293,11 @@ export class LoginComponent {
       script.onerror = () => reject(new Error('load error'));
       document.head.appendChild(script);
     });
+  }
+
+  switchMode(mode: 'phone' | 'email') {
+    this.mode.set(mode);
+    this.otpSent.set(false);
+    this.otpForm.reset();
   }
 }
