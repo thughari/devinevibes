@@ -5,6 +5,7 @@ import { UpdateUserProfileRequest, UserProfileResponse } from '../../shared/mode
 import { tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -29,7 +30,10 @@ export class AuthService {
       if (token) {
         this.isAuthenticated.set(true);
         this.fetchProfile().subscribe({
-          error: () => {
+          error: (err: HttpErrorResponse) => {
+            if (err.status !== 401) {
+              return;
+            }
             this.refreshToken().subscribe({
               next: () => {
                 this.fetchProfile().subscribe({
@@ -46,7 +50,7 @@ export class AuthService {
 
   getAccessToken(): string | null {
     if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem(this.TOKEN_KEY);
+      return localStorage.getItem(this.TOKEN_KEY) || localStorage.getItem('token');
     }
     return null;
   }
@@ -62,6 +66,7 @@ export class AuthService {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.setItem(this.TOKEN_KEY, auth.accessToken);
       localStorage.setItem(this.REFRESH_TOKEN_KEY, auth.refreshToken);
+      localStorage.removeItem('token');
     }
     this.isAuthenticated.set(true);
   }
@@ -70,6 +75,7 @@ export class AuthService {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem(this.TOKEN_KEY);
       localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+      localStorage.removeItem('token');
     }
     this.isAuthenticated.set(false);
     this.currentUser.set(null);

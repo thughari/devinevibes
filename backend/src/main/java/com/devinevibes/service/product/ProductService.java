@@ -5,8 +5,6 @@ import com.devinevibes.dto.product.ProductResponse;
 import com.devinevibes.entity.product.Product;
 import com.devinevibes.exception.ProductNotFoundException;
 import com.devinevibes.repository.product.ProductRepository;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,7 +19,6 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    @Cacheable("products")
     public List<ProductResponse> getAll() {
         return productRepository.findAll().stream().map(this::map).toList();
     }
@@ -30,7 +27,6 @@ public class ProductService {
         return map(fetchEntity(id));
     }
 
-    @CacheEvict(value = "products", allEntries = true)
     public ProductResponse create(CreateProductRequest request) {
         Product product = new Product();
         product.setName(request.name());
@@ -41,7 +37,6 @@ public class ProductService {
         return map(productRepository.save(product));
     }
 
-    @CacheEvict(value = "products", allEntries = true)
     public ProductResponse update(UUID id, CreateProductRequest request) {
         Product p = fetchEntity(id);
         p.setName(request.name());
@@ -52,7 +47,6 @@ public class ProductService {
         return map(productRepository.save(p));
     }
 
-    @CacheEvict(value = "products", allEntries = true)
     public void delete(UUID id) {
         productRepository.delete(fetchEntity(id));
     }
