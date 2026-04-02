@@ -60,4 +60,9 @@ public class UserController {
         userService.deleteAddress(SecurityUtils.currentPrincipalEmail(), id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/addresses/{id}")
+    public ResponseEntity<AddressResponse> updateAddress(@PathVariable UUID id, @Valid @RequestBody AddressRequest request) {
+        return ResponseEntity.ok(userService.updateAddress(SecurityUtils.currentPrincipalEmail(), id, request));
+    }
 }

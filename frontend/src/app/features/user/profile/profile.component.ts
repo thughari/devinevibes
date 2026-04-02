@@ -40,7 +40,9 @@ import { AddressResponse } from '../../../shared/models/user.model';
           <input formControlName="postalCode" placeholder="PIN / Postal code*" class="border rounded-md px-3 py-2" />
           <input formControlName="country" placeholder="Country*" class="border rounded-md px-3 py-2" />
           <label class="flex items-center gap-2 text-sm"><input type="checkbox" formControlName="isDefault" /> Set as default</label>
-          <button type="submit" [disabled]="addressForm.invalid" class="sm:col-span-2 bg-brand-dark text-white px-4 py-2 rounded-md">Add Address</button>
+          <button type="submit" [disabled]="addressForm.invalid" class="sm:col-span-2 bg-brand-dark text-white px-4 py-2 rounded-md">
+            {{ editingAddressId ? 'Update Address' : 'Add Address' }}
+          </button>
         </form>
 
         <div class="space-y-3">
@@ -51,7 +53,10 @@ import { AddressResponse } from '../../../shared/models/user.model';
                 <p class="text-sm text-brand-text">{{ address.line1 }}, {{ address.line2 }}</p>
                 <p class="text-sm text-brand-text">{{ address.city }}, {{ address.state }} - {{ address.postalCode }}, {{ address.country }}</p>
               </div>
-              <button type="button" (click)="deleteAddress(address.id)" class="text-red-600 text-sm">Delete</button>
+              <div class="flex flex-col gap-2">
+                <button type="button" (click)="editAddress(address)" class="text-brand-green text-sm">Edit</button>
+                <button type="button" (click)="deleteAddress(address.id)" class="text-red-600 text-sm">Delete</button>
+              </div>
             </div>
           } @empty {
             <p class="text-sm text-brand-text">No saved addresses yet.</p>
@@ -67,6 +72,7 @@ export class ProfileComponent {
   private fb = inject(FormBuilder);
   private snackbar = inject(SnackbarService);
   addresses: AddressResponse[] = [];
+  editingAddressId: string | null = null;
 
   form = this.fb.group({
     name: [this.auth.currentUser()?.name || '', Validators.required],
@@ -98,18 +104,26 @@ export class ProfileComponent {
 
   loadAddresses() {
     this.api.get<AddressResponse[]>('/user/addresses').subscribe({
-      next: (addresses) => this.addresses = addresses
+      next: (addresses) => this.addresses = addresses,
+      error: () => this.snackbar.showError('Unable to load saved addresses')
     });
   }
 
   addAddress() {
     if (this.addressForm.invalid) return;
-    this.api.post<AddressResponse>('/user/addresses', this.addressForm.value).subscribe({
+    const request = this.addressForm.value;
+    const call = this.editingAddressId
+      ? this.api.put<AddressResponse>(`/user/addresses/${this.editingAddressId}`, request)
+      : this.api.post<AddressResponse>('/user/addresses', request);
+
+    call.subscribe({
       next: () => {
-        this.snackbar.showSuccess('Address added');
-        this.addressForm.patchValue({ line1: '', line2: '', city: '', state: '', postalCode: '', isDefault: false });
+        this.snackbar.showSuccess(this.editingAddressId ? 'Address updated' : 'Address added');
+        this.editingAddressId = null;
+        this.addressForm.patchValue({ label: 'Home', line1: '', line2: '', city: '', state: '', postalCode: '', country: 'India', isDefault: false });
         this.loadAddresses();
-      }
+      },
+      error: () => this.snackbar.showError('Unable to save address')
     });
   }
 
@@ -118,7 +132,22 @@ export class ProfileComponent {
       next: () => {
         this.snackbar.showInfo('Address removed');
         this.loadAddresses();
-      }
+      },
+      error: () => this.snackbar.showError('Unable to delete address')
+    });
+  }
+
+  editAddress(address: AddressResponse) {
+    this.editingAddressId = address.id;
+    this.addressForm.patchValue({
+      label: address.label || 'Home',
+      line1: address.line1,
+      line2: address.line2 || '',
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country,
+      isDefault: !!address.isDefault
     });
   }
 }

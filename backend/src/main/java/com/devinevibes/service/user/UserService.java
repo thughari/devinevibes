@@ -65,6 +65,23 @@ public class UserService {
         addressRepository.delete(address);
     }
 
+    public AddressResponse updateAddress(String email, UUID addressId, AddressRequest request) {
+        User user = getByEmail(email);
+        Address address = addressRepository.findByIdAndUser(addressId, user)
+                .orElseThrow(() -> new UserNotFoundException("Address not found"));
+
+        if (request.isDefault()) unsetDefault(user);
+        address.setLine1(request.line1().trim());
+        address.setLine2(request.line2());
+        address.setCity(request.city().trim());
+        address.setState(request.state().trim());
+        address.setPostalCode(request.postalCode().trim());
+        address.setCountry(request.country().trim());
+        address.setLabel(request.label());
+        address.setDefault(request.isDefault());
+        return toResponse(addressRepository.save(address));
+    }
+
     private void unsetDefault(User user) {
         var addresses = addressRepository.findAllByUserOrderByCreatedAtDesc(user);
         addresses.forEach(a -> a.setDefault(false));
