@@ -33,7 +33,7 @@ public class ProductService {
         product.setDescription(request.description());
         product.setPrice(request.price());
         product.setStock(request.stock());
-        product.setImageUrl(request.imageUrl());
+        applyMedia(request, product);
         return map(productRepository.save(product));
     }
 
@@ -43,7 +43,7 @@ public class ProductService {
         p.setDescription(request.description());
         p.setPrice(request.price());
         p.setStock(request.stock());
-        p.setImageUrl(request.imageUrl());
+        applyMedia(request, p);
         return map(productRepository.save(p));
     }
 
@@ -56,6 +56,24 @@ public class ProductService {
     }
 
     private ProductResponse map(Product p) {
-        return new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getStock(), p.getImageUrl());
+        var images = p.getImageUrls() == null ? List.<String>of() : p.getImageUrls();
+        var videos = p.getVideoUrls() == null ? List.<String>of() : p.getVideoUrls();
+        String thumbnail = p.getImageUrl();
+        if ((thumbnail == null || thumbnail.isBlank()) && !images.isEmpty()) {
+            thumbnail = images.get(0);
+        }
+        return new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getStock(), thumbnail, images, videos);
+    }
+
+    private void applyMedia(CreateProductRequest request, Product product) {
+        product.setImageUrl(request.imageUrl());
+        if (request.imageUrls() != null) {
+            product.setImageUrls(request.imageUrls().stream().filter(u -> u != null && !u.isBlank()).toList());
+        } else if (request.imageUrl() != null && !request.imageUrl().isBlank()) {
+            product.setImageUrls(List.of(request.imageUrl()));
+        }
+        if (request.videoUrls() != null) {
+            product.setVideoUrls(request.videoUrls().stream().filter(u -> u != null && !u.isBlank()).toList());
+        }
     }
 }

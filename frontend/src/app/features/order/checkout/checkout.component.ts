@@ -1,13 +1,17 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
+import { CartService } from '../../../core/services/cart.service';
+import { ApiService } from '../../../core/services/api.service';
+import { CurrencyPipe } from '@angular/common';
+import { ApplyCouponResponse } from '../../../shared/models/coupon.model';
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [ReactiveFormsModule, MatIconModule],
+  imports: [ReactiveFormsModule, MatIconModule, CurrencyPipe],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1 class="text-3xl md:text-4xl font-sans font-bold text-brand-dark mb-8">Secure Checkout</h1>
@@ -117,43 +121,56 @@ import { MatIconModule } from '@angular/material/icon';
           <div class="bg-brand-gray border border-gray-100 rounded-lg px-4 py-6 sm:p-6 lg:p-8 sticky top-24 shadow-sm">
             <h2 class="text-lg font-sans font-bold text-brand-dark mb-6">Order Summary</h2>
 
+            <div class="mb-4 flex gap-2">
+              <input [formControl]="couponCode" placeholder="Coupon code" class="flex-1 border rounded-md px-3 py-2 text-sm"/>
+              <button type="button" (click)="applyCoupon()" class="px-3 py-2 border rounded-md text-sm">Apply</button>
+            </div>
+
             <div class="flow-root mb-6">
               <ul role="list" class="-my-4 divide-y divide-gray-200">
+                @for (item of cartItems(); track item.cartItemId) {
                 <li class="flex py-4">
                   <div class="flex-shrink-0 w-16 h-16 border border-gray-200 rounded-md overflow-hidden">
-                    <img src="https://picsum.photos/seed/1/100/100" alt="Product" class="w-full h-full object-cover" referrerpolicy="no-referrer">
+                    <img [src]="item.imageUrl || 'https://picsum.photos/seed/' + item.productId + '/100/100'" alt="Product" class="w-full h-full object-cover" referrerpolicy="no-referrer">
                   </div>
                   <div class="ml-4 flex-1 flex flex-col">
                     <div>
                       <div class="flex justify-between text-sm font-medium text-brand-dark">
-                        <h3 class="font-sans">5 Mukhi Rudraksha Mala</h3>
-                        <p class="text-brand-dark font-bold">₹1,500</p>
+                        <h3 class="font-sans">{{ item.productName }}</h3>
+                        <p class="text-brand-dark font-bold">{{ item.totalPrice | currency:'INR':'symbol':'1.0-0' }}</p>
                       </div>
                     </div>
                     <div class="flex-1 flex items-end justify-between text-sm">
-                      <p class="text-brand-text">Qty 1</p>
+                      <p class="text-brand-text">Qty {{ item.quantity }}</p>
                     </div>
                   </div>
                 </li>
+                }
               </ul>
             </div>
 
             <dl class="space-y-4 text-sm text-brand-text pt-6 border-t border-gray-200">
               <div class="flex items-center justify-between">
                 <dt>Subtotal</dt>
-                <dd class="font-medium text-brand-dark">₹1,500</dd>
+                <dd class="font-medium text-brand-dark">{{ subtotal() | currency:'INR':'symbol':'1.0-0' }}</dd>
               </div>
               <div class="flex items-center justify-between">
                 <dt>Shipping</dt>
-                <dd class="font-medium text-brand-dark">₹150</dd>
+                <dd class="font-medium text-brand-dark">{{ shipping() | currency:'INR':'symbol':'1.0-0' }}</dd>
               </div>
               <div class="flex items-center justify-between">
                 <dt>Tax (18%)</dt>
-                <dd class="font-medium text-brand-dark">₹270</dd>
+                <dd class="font-medium text-brand-dark">{{ tax() | currency:'INR':'symbol':'1.0-0' }}</dd>
               </div>
+              @if (couponDiscount() > 0) {
+              <div class="flex items-center justify-between">
+                <dt>Coupon Discount</dt>
+                <dd class="font-medium text-green-700">- {{ couponDiscount() | currency:'INR':'symbol':'1.0-0' }}</dd>
+              </div>
+              }
               <div class="flex items-center justify-between pt-4 border-t border-gray-200">
                 <dt class="text-base font-bold text-brand-dark">Total</dt>
-                <dd class="text-xl font-bold text-brand-dark">₹1,920</dd>
+                <dd class="text-xl font-bold text-brand-dark">{{ finalTotal() | currency:'INR':'symbol':'1.0-0' }}</dd>
               </div>
             </dl>
 
@@ -186,8 +203,17 @@ export class CheckoutComponent {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
+  private cartService = inject(CartService);
+  private api = inject(ApiService);
 
   isProcessing = signal(false);
+  couponCode = this.fb.control('');
+  couponDiscount = signal(0);
+  cartItems = this.cartService.items;
+  subtotal = computed(() => this.cartItems().reduce((sum, item) => sum + item.totalPrice, 0));
+  shipping = computed(() => this.subtotal() > 5000 ? 0 : 150);
+  tax = computed(() => this.subtotal() * 0.18);
+  finalTotal = computed(() => Math.max(0, this.subtotal() + this.shipping() + this.tax() - this.couponDiscount()));
 
   checkoutForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -216,5 +242,18 @@ export class CheckoutComponent {
       this.checkoutForm.markAllAsTouched();
       this.snackbar.showError('Please fill all required fields correctly.');
     }
+  }
+
+  applyCoupon() {
+    const code = this.couponCode.value?.trim();
+    if (!code) return;
+    const quantity = this.cartItems().reduce((sum, item) => sum + item.quantity, 0);
+    this.api.post<ApplyCouponResponse>('/coupons/apply', { code, cartTotal: this.subtotal(), quantity }).subscribe({
+      next: (res) => {
+        this.couponDiscount.set(res.discountAmount);
+        this.snackbar.showSuccess(res.message);
+      },
+      error: () => this.snackbar.showError('Invalid coupon')
+    });
   }
 }

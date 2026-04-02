@@ -4,6 +4,8 @@ export interface CreateProductRequest {
   price: number;
   stock: number;
   imageUrl?: string;
+  imageUrls?: string[];
+  videoUrls?: string[];
 }
 
 export interface ProductResponse {
@@ -13,4 +15,6 @@ export interface ProductResponse {
   price: number;
   stock: number;
   imageUrl?: string;
+  imageUrls?: string[];
+  videoUrls?: string[];
 }

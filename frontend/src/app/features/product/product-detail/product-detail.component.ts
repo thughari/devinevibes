@@ -33,25 +33,32 @@ import { CartService } from '../../../core/services/cart.service';
           <!-- Image Gallery -->
           <div class="space-y-4">
             <div class="aspect-square rounded-lg overflow-hidden bg-brand-gray border border-gray-100">
-              <img 
-                [src]="product()?.imageUrl || 'https://picsum.photos/seed/' + product()?.id + '/800/800'" 
+              <img
+                [src]="selectedMedia() || product()?.imageUrl || 'https://picsum.photos/seed/' + product()?.id + '/800/800'"
                 [alt]="product()?.name"
                 referrerpolicy="no-referrer"
                 class="w-full h-full object-cover"
               />
             </div>
-            <!-- Thumbnails (Mock) -->
             <div class="grid grid-cols-4 gap-4">
-              <div class="aspect-square rounded-md overflow-hidden border-2 border-brand-green bg-brand-gray cursor-pointer">
-                <img [src]="product()?.imageUrl || 'https://picsum.photos/seed/' + product()?.id + '/200/200'" alt="Thumb" class="w-full h-full object-cover opacity-100" referrerpolicy="no-referrer">
-              </div>
-              <div class="aspect-square rounded-md overflow-hidden border border-gray-200 bg-brand-gray cursor-pointer hover:border-brand-green transition-colors">
-                <img src="https://picsum.photos/seed/detail1/200/200" alt="Thumb" class="w-full h-full object-cover opacity-70 hover:opacity-100 transition-opacity" referrerpolicy="no-referrer">
-              </div>
-              <div class="aspect-square rounded-md overflow-hidden border border-gray-200 bg-brand-gray cursor-pointer hover:border-brand-green transition-colors">
-                <img src="https://picsum.photos/seed/detail2/200/200" alt="Thumb" class="w-full h-full object-cover opacity-70 hover:opacity-100 transition-opacity" referrerpolicy="no-referrer">
-              </div>
+              @for (img of (product()?.imageUrls || [product()?.imageUrl]); track img) {
+                @if (img) {
+                  <button type="button" (click)="setSelectedMedia(img)" class="aspect-square rounded-md overflow-hidden border bg-brand-gray cursor-pointer hover:border-brand-green transition-colors">
+                    <img [src]="img" alt="Thumb" class="w-full h-full object-cover" referrerpolicy="no-referrer">
+                  </button>
+                }
+              }
             </div>
+            @if ((product()?.videoUrls || []).length > 0) {
+              <div class="space-y-2">
+                <h4 class="text-sm font-semibold text-brand-dark">Product Videos</h4>
+                @for (videoUrl of product()?.videoUrls || []; track videoUrl) {
+                  <video controls class="w-full rounded-md border border-gray-200 bg-black">
+                    <source [src]="videoUrl" />
+                  </video>
+                }
+              </div>
+            }
           </div>
 
           <!-- Product Info -->
@@ -163,6 +170,7 @@ export class ProductDetailComponent implements OnInit {
   product = signal<ProductResponse | null>(null);
   isLoading = signal(true);
   quantity = signal(1);
+  selectedMedia = signal<string | null>(null);
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
@@ -178,10 +186,12 @@ export class ProductDetailComponent implements OnInit {
     this.api.get<ProductResponse>(`/products/${id}`).subscribe({
       next: (data) => {
         this.product.set(data);
+        this.selectedMedia.set((data.imageUrls && data.imageUrls.length > 0) ? data.imageUrls[0] : data.imageUrl || null);
         this.isLoading.set(false);
       },
       error: () => {
         this.product.set(null);
+        this.selectedMedia.set(null);
         this.isLoading.set(false);
       }
     });
@@ -204,5 +214,9 @@ export class ProductDetailComponent implements OnInit {
       this.cartService.addToCart(this.product()!, this.quantity());
       this.snackbar.showSuccess(`Added ${this.quantity()}x ${this.product()!.name} to cart`);
     }
+  }
+
+  setSelectedMedia(url: string) {
+    this.selectedMedia.set(url);
   }
 }

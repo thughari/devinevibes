@@ -1,0 +1,33 @@
+export type CouponType = 'PERCENTAGE' | 'FIXED' | 'BXGX';
+
+export interface CouponResponse {
+  id: string;
+  code: string;
+  type: CouponType;
+  discountValue?: number;
+  minimumCartValue?: number;
+  buyQty?: number;
+  getQty?: number;
+  productId?: string;
+  active: boolean;
+  expiresAt?: string;
+}
+
+export interface CreateCouponRequest {
+  code: string;
+  type: CouponType;
+  discountValue?: number;
+  minimumCartValue?: number;
+  buyQty?: number;
+  getQty?: number;
+  productId?: string;
+  active?: boolean;
+  expiresAt?: string;
+}
+
+export interface ApplyCouponResponse {
+  code: string;
+  discountAmount: number;
+  finalTotal: number;
+  message: string;
+}
