@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import { AddToCartRequest, CartItemResponse } from '../../shared/models/cart.model';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
@@ -18,6 +19,7 @@ export class CartService {
   private auth = inject(AuthService);
   private snackbar = inject(SnackbarService);
   private readonly GUEST_KEY = 'dv_guest_cart';
+  cartUpdated$ = new Subject<void>();
 
   items = signal<CartItemResponse[]>([]);
   isLoading = signal(false);
@@ -42,6 +44,7 @@ export class CartService {
       imageUrl: item.imageUrl,
       availableStock: 999 // guest fallback maximum (unknown stock), server check at checkout ensures correctness
     })));
+    this.cartUpdated$.next();
   }
 
   addToCart(product: { id: string; name: string; price: number; stock: number; imageUrl?: string }, quantity = 1) {
@@ -71,6 +74,21 @@ export class CartService {
     else guest.push({ productId: product.id, productName: product.name, imageUrl: product.imageUrl, quantity, unitPrice: product.price });
     this.writeGuestCart(guest);
     this.loadCart();
+  }
+
+  addToCartById(productId: string, quantity: number = 1) {
+    this.api.get<any>(`/products/${productId}`).subscribe({
+      next: (product) => {
+        this.addToCart({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          stock: product.stock,
+          imageUrl: product.imageUrl
+        }, quantity);
+      },
+      error: () => this.snackbar.showError('Unable to fetch product details for automatic addition.')
+    });
   }
 
   updateQuantity(item: CartItemResponse, quantity: number) {
@@ -141,6 +159,7 @@ export class CartService {
       next: (items) => {
         this.items.set(items);
         this.isLoading.set(false);
+        this.cartUpdated$.next();
       },
       error: () => this.isLoading.set(false)
     });

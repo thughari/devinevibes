@@ -15,5 +15,7 @@ public record CreateCouponRequest(
         Integer getQty,
         UUID productId,
         Boolean active,
-        Instant expiresAt
+        Instant expiresAt,
+        Integer maxUses,
+        Integer maxUsesPerUser
 ) {}

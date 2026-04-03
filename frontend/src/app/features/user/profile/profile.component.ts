@@ -12,22 +12,55 @@ import { AddressResponse, UserProfileResponse } from '../../../shared/models/use
   imports: [ReactiveFormsModule, MatIconModule],
   template: `
     <section class="max-w-3xl mx-auto px-4 py-8 sm:py-12">
-      <h1 class="text-2xl sm:text-3xl font-bold text-brand-dark mb-6">My Profile</h1>
-      <form [formGroup]="form" (ngSubmit)="save()" class="bg-white border border-gray-100 rounded-xl p-4 sm:p-6 space-y-4 shadow-sm">
-        <label class="block">
-          <span class="text-sm text-brand-text">Name</span>
-          <input formControlName="name" class="mt-1 w-full border rounded-md px-3 py-2" />
-        </label>
-        <label class="block">
-          <span class="text-sm text-brand-text">Email</span>
-          <input formControlName="email" class="mt-1 w-full border rounded-md px-3 py-2" />
-        </label>
-        <label class="block">
-          <span class="text-sm text-brand-text">Phone</span>
-          <input formControlName="phone" class="mt-1 w-full border rounded-md px-3 py-2" />
-        </label>
-        <button type="submit" [disabled]="form.invalid" class="bg-brand-green text-white px-4 py-2 rounded-md">Save changes</button>
-      </form>
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold text-brand-dark">My Profile</h1>
+        @if (!isEditingProfile()) {
+          <button (click)="isEditingProfile.set(true)" class="flex items-center gap-1 text-sm font-medium text-brand-green hover:text-brand-gold transition-colors">
+            <mat-icon class="text-[18px]">edit</mat-icon> Edit Profile
+          </button>
+        }
+      </div>
+
+      <div class="bg-white border border-gray-100 rounded-xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
+        <!-- Decoration -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-brand-gold/5 rounded-bl-full -z-10"></div>
+        
+        @if (isEditingProfile()) {
+          <form [formGroup]="form" (ngSubmit)="save()" class="space-y-5">
+            <label class="block">
+              <span class="text-sm font-medium text-brand-text mb-1 block">Full Name</span>
+              <input formControlName="name" class="w-full border border-gray-300 focus:border-brand-green focus:ring focus:ring-brand-green/20 rounded-lg px-4 py-2.5 outline-none transition-all" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-brand-text mb-1 block">Email Address</span>
+              <input formControlName="email" class="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-lg px-4 py-2.5 outline-none" readonly title="Email cannot be changed directly" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-brand-text mb-1 block">Phone Number</span>
+              <input formControlName="phone" class="w-full border border-gray-300 focus:border-brand-green focus:ring focus:ring-brand-green/20 rounded-lg px-4 py-2.5 outline-none transition-all" />
+            </label>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" [disabled]="form.invalid" class="bg-brand-green text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-green-dark transition-colors disabled:opacity-50 shadow-sm">Save Changes</button>
+              <button type="button" (click)="cancelEditProfile()" class="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors">Cancel</button>
+            </div>
+          </form>
+        } @else {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <p class="text-[11px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Full Name</p>
+              <p class="text-brand-dark font-serif text-xl sm:text-2xl">{{ auth.currentUser()?.name || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Email Address</p>
+              <p class="text-brand-dark font-medium text-base">{{ auth.currentUser()?.email || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Phone Number</p>
+              <p class="text-brand-dark font-medium text-base">{{ auth.currentUser()?.phone || '-' }}</p>
+            </div>
+          </div>
+        }
+      </div>
 
       <div class="mt-8 bg-white border border-gray-100 rounded-xl p-4 sm:p-6 shadow-sm">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
@@ -92,6 +125,7 @@ export class ProfileComponent {
   editingAddressId: string | null = null;
   showAddressForm = signal(false);
   isAddressLoading = signal(true);
+  isEditingProfile = signal(false);
 
   form = this.fb.group({
     name: ['', Validators.required],
@@ -140,6 +174,14 @@ export class ProfileComponent {
     });
   }
 
+  cancelEditProfile() {
+    this.isEditingProfile.set(false);
+    const user = this.auth.currentUser();
+    if (user) {
+      this.applyUserToForm(user);
+    }
+  }
+
   save() {
     if (this.form.invalid) return;
 
@@ -151,7 +193,10 @@ export class ProfileComponent {
     };
 
     this.auth.updateProfile(payload).subscribe({
-      next: () => this.snackbar.showSuccess('Profile updated successfully')
+      next: () => {
+        this.snackbar.showSuccess('Profile updated successfully');
+        this.isEditingProfile.set(false);
+      }
     });
   }
 

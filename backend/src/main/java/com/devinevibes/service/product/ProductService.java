@@ -5,8 +5,10 @@ import com.devinevibes.dto.product.ProductResponse;
 import com.devinevibes.entity.product.Product;
 import com.devinevibes.exception.ProductNotFoundException;
 import com.devinevibes.repository.product.ProductRepository;
+import com.devinevibes.repository.cart.CartRepository;
 import com.devinevibes.service.storage.StorageService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -18,10 +20,12 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final StorageService storageService;
+    private final CartRepository cartRepository;
 
-    public ProductService(ProductRepository productRepository, StorageService storageService) {
+    public ProductService(ProductRepository productRepository, StorageService storageService, CartRepository cartRepository) {
         this.productRepository = productRepository;
         this.storageService = storageService;
+        this.cartRepository = cartRepository;
     }
 
     public List<ProductResponse> getAll() {
@@ -72,8 +76,13 @@ public class ProductService {
         return map(productRepository.save(p));
     }
 
+    @Transactional
     public void delete(UUID id) {
         Product p = fetchEntity(id);
+        
+        // Remove from users' carts first to satisfy foreign key constraints
+        cartRepository.deleteByProduct(p);
+        
         if (p.getImageUrl() != null && !p.getImageUrl().isBlank()) storageService.deleteFile(p.getImageUrl());
         if (p.getImageUrls() != null) p.getImageUrls().forEach(storageService::deleteFile);
         if (p.getVideoUrls() != null) p.getVideoUrls().forEach(storageService::deleteFile);
@@ -84,12 +93,25 @@ public class ProductService {
         return productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException("Product not found"));
     }
 
-    public Product reserveStock(Product product, int quantity) {
+    @Transactional
+    public Product reserveStock(Product p, int quantity) {
+        // Essential for rock-solid concurrency (SELECT FOR UPDATE)
+        Product product = productRepository.findByIdWithLock(p.getId())
+                .orElseThrow(() -> new ProductNotFoundException("Product for reservation not found"));
+                
         if (product.getStock() < quantity) {
             throw new com.devinevibes.exception.BadRequestException("Insufficient stock for product " + product.getName());
         }
         product.setStock(product.getStock() - quantity);
         return productRepository.save(product);
+    }
+
+    @Transactional
+    public void releaseStock(Product p, int quantity) {
+        Product product = productRepository.findByIdWithLock(p.getId())
+                .orElseThrow(() -> new ProductNotFoundException("Product for release not found"));
+        product.setStock(product.getStock() + quantity);
+        productRepository.save(product);
     }
 
     private ProductResponse map(Product p) {

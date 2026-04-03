@@ -45,13 +45,14 @@ public class R2StorageService implements StorageService {
         try {
             String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
             String normalizedName = originalName.trim().replaceAll("\\s+", "-").replaceAll("[^a-zA-Z0-9._-]", "");
-            String key = (userId == null || userId.isEmpty() ? "" : userId + "/") + UUID.randomUUID() + "-" + normalizedName;
+            String key = (userId == null || userId.isEmpty() ? "" : userId + "/") + UUID.randomUUID() + "-"
+                    + normalizedName;
             String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
             s3Client.putObject(PutObjectRequest.builder()
-                            .bucket(productBucket)
-                            .key(key)
-                            .contentType(contentType)
-                            .build(),
+                    .bucket(productBucket)
+                    .key(key)
+                    .contentType(contentType)
+                    .build(),
                     RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
             return productsPublicUrl + "/" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8);
         } catch (IOException e) {
@@ -65,17 +66,18 @@ public class R2StorageService implements StorageService {
             URL url = URI.create(externalUrl).toURL();
             String fileName = Paths.get(url.getPath()).getFileName().toString();
             String normalizedName = fileName.trim().replaceAll("\\s+", "-").replaceAll("[^a-zA-Z0-9._-]", "");
-            String key = (userId == null || userId.isEmpty() ? "" : userId + "/") + UUID.randomUUID() + "-" + normalizedName;
+            String key = (userId == null || userId.isEmpty() ? "" : userId + "/") + UUID.randomUUID() + "-"
+                    + normalizedName;
             String contentType = java.net.URLConnection.guessContentTypeFromName(fileName);
             if (contentType == null) {
                 contentType = "application/octet-stream";
             }
             byte[] bytes = url.openStream().readAllBytes();
             s3Client.putObject(PutObjectRequest.builder()
-                            .bucket(avatarBucket)
-                            .key(key)
-                            .contentType(contentType)
-                            .build(),
+                    .bucket(avatarBucket)
+                    .key(key)
+                    .contentType(contentType)
+                    .build(),
                     RequestBody.fromBytes(bytes));
             return avatarPublicUrl + "/" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8);
         } catch (IOException e) {

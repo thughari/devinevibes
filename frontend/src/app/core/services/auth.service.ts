@@ -16,6 +16,7 @@ export class AuthService {
 
   private readonly TOKEN_KEY = 'dv_access_token';
   private readonly REFRESH_TOKEN_KEY = 'dv_refresh_token';
+  private readonly PROFILE_KEY = 'dv_user_profile';
 
   currentUser = signal<UserProfileResponse | null>(null);
   isAuthenticated = signal<boolean>(false);
@@ -27,6 +28,16 @@ export class AuthService {
   private checkAuthStatus() {
     if (typeof window !== 'undefined' && window.localStorage) {
       const token = this.getAccessToken();
+      const cachedProfile = localStorage.getItem(this.PROFILE_KEY);
+      
+      if (cachedProfile) {
+        try {
+          this.currentUser.set(JSON.parse(cachedProfile));
+        } catch (e) {
+          // Ignore invalid cache
+        }
+      }
+
       if (token) {
         this.isAuthenticated.set(true);
         this.fetchProfile().subscribe({
@@ -86,6 +97,7 @@ export class AuthService {
       localStorage.removeItem(this.TOKEN_KEY);
       localStorage.removeItem(this.REFRESH_TOKEN_KEY);
       localStorage.removeItem('token');
+      localStorage.removeItem(this.PROFILE_KEY);
     }
     this.isAuthenticated.set(false);
     this.currentUser.set(null);
@@ -129,13 +141,23 @@ export class AuthService {
 
   fetchProfile(): Observable<UserProfileResponse> {
     return this.api.get<UserProfileResponse>('/user/me').pipe(
-      tap(profile => this.currentUser.set(profile))
+      tap(profile => {
+        this.currentUser.set(profile);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(this.PROFILE_KEY, JSON.stringify(profile));
+        }
+      })
     );
   }
 
   updateProfile(data: UpdateUserProfileRequest): Observable<UserProfileResponse> {
     return this.api.put<UserProfileResponse>('/user/me', data).pipe(
-      tap(profile => this.currentUser.set(profile))
+      tap(profile => {
+        this.currentUser.set(profile);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(this.PROFILE_KEY, JSON.stringify(profile));
+        }
+      })
     );
   }
 

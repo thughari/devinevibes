@@ -16,7 +16,13 @@ public class CouponController {
     }
 
     @PostMapping("/apply")
-    public ResponseEntity<ApplyCouponResponse> apply(@RequestBody ApplyCouponRequest request) {
-        return ResponseEntity.ok(couponService.apply(request));
+    public ResponseEntity<ApplyCouponResponse> apply(java.security.Principal principal, @RequestBody ApplyCouponRequest request) {
+        String email = principal != null ? principal.getName() : null;
+        return ResponseEntity.ok(couponService.apply(email, request));
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<java.util.List<com.devinevibes.dto.coupon.CouponResponse>> getActiveCoupons() {
+        return ResponseEntity.ok(couponService.getActiveCoupons());
     }
 }

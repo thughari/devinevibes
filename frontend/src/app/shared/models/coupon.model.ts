@@ -11,6 +11,9 @@ export interface CouponResponse {
   productId?: string;
   active: boolean;
   expiresAt?: string;
+  maxUses?: number;
+  maxUsesPerUser?: number;
+  usageCount?: number;
 }
 
 export interface CreateCouponRequest {
@@ -23,6 +26,8 @@ export interface CreateCouponRequest {
   productId?: string;
   active?: boolean;
   expiresAt?: string;
+  maxUses?: number;
+  maxUsesPerUser?: number;
 }
 
 export interface ApplyCouponResponse {
@@ -30,4 +35,8 @@ export interface ApplyCouponResponse {
   discountAmount: number;
   finalTotal: number;
   message: string;
+  productIdToAdd?: string;
+  quantityToAdd?: number;
+  freeQuantity?: number;
+  targetProductId?: string;
 }

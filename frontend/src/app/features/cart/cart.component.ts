@@ -5,6 +5,7 @@ import { CartItemResponse } from '../../shared/models/cart.model';
 import { SnackbarService } from '../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
 import { CartService } from '../../core/services/cart.service';
+import { ConfigService } from '../../core/services/config.service';
 
 @Component({
   selector: 'app-cart',
@@ -95,12 +96,6 @@ import { CartService } from '../../core/services/cart.service';
                 <dd class="font-medium text-brand-dark">{{ shipping() | currency:'INR':'symbol':'1.0-0' }}</dd>
               </div>
               <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                <dt class="flex text-sm">
-                  <span>Tax estimate</span>
-                </dt>
-                <dd class="font-medium text-brand-dark">{{ tax() | currency:'INR':'symbol':'1.0-0' }}</dd>
-              </div>
-              <div class="flex items-center justify-between pt-4 border-t border-gray-200">
                 <dt class="text-base font-bold text-brand-dark">Order total</dt>
                 <dd class="text-xl font-bold text-brand-dark">{{ total() | currency:'INR':'symbol':'1.0-0' }}</dd>
               </div>
@@ -143,14 +138,20 @@ export class CartComponent {
   private snackbar = inject(SnackbarService);
   private router = inject(Router);
   private cartService = inject(CartService);
+  private configService = inject(ConfigService);
 
   isLoading = this.cartService.isLoading;
   cartItems = this.cartService.items;
 
   subtotal = computed(() => this.cartItems().reduce((sum, item) => sum + item.totalPrice, 0));
-  shipping = computed(() => this.subtotal() > 5000 ? 0 : 150);
-  tax = computed(() => this.subtotal() * 0.18); // 18% GST
-  total = computed(() => this.subtotal() + this.shipping() + this.tax());
+  
+  shipping = computed(() => {
+    const config = this.configService.config();
+    if (!config) return 0;
+    return this.subtotal() >= config.freeShippingThreshold ? 0 : config.standardShippingCost;
+  });
+  
+  total = computed(() => this.subtotal() + this.shipping());
 
   updateQuantity(cartItemId: string, newQuantity: number) {
     if (newQuantity < 1) return;

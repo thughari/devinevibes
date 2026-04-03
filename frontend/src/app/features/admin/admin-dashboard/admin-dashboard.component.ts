@@ -1,32 +1,36 @@
-import { Component, inject, signal } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import { Component, inject, signal, afterNextRender } from '@angular/core';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { ApiService } from '../../../core/services/api.service';
 import { ProductResponse } from '../../../shared/models/product.model';
-import { OrderResponse } from '../../../shared/models/order.model';
+import { OrderResponse, PageResponse } from '../../../shared/models/order.model';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CouponResponse } from '../../../shared/models/coupon.model';
 import { lastValueFrom } from 'rxjs';
+import { StoreConfigResponse } from '../../../shared/models/config.model';
+import { AnalyticsResponse } from '../../../shared/models/analytics.model';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CurrencyPipe, MatIconModule, ReactiveFormsModule],
+  imports: [CurrencyPipe, DatePipe, MatIconModule, ReactiveFormsModule],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="flex justify-between items-center mb-8">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <h1 class="text-3xl md:text-4xl font-sans font-medium text-gray-900">Admin Dashboard</h1>
-        <button (click)="addProduct()" class="bg-dv-green text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors flex items-center gap-2 shadow-sm">
-          <mat-icon class="text-[20px]">add</mat-icon> Add Product
-        </button>
+        @if (!showAddProduct()) {
+          <button (click)="addProduct()" class="bg-dv-green text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors flex items-center gap-2 shadow-sm">
+            <mat-icon class="text-[20px]">add</mat-icon> Add Product
+          </button>
+        }
       </div>
 
       @if (showAddProduct()) {
         <section class="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 mb-8">
           <div class="flex items-center justify-between mb-5">
-            <h2 class="text-2xl font-semibold text-gray-900">Create New Product</h2>
-            <button type="button" (click)="showAddProduct.set(false)" class="text-gray-500 hover:text-gray-700">Close</button>
+            <h2 class="text-2xl font-semibold text-gray-900">{{ editingProductId ? 'Edit Product' : 'Create New Product' }}</h2>
+            <button type="button" (click)="cancelEdit()" class="text-gray-500 hover:text-gray-700 p-2"><mat-icon>close</mat-icon></button>
           </div>
 
           <form [formGroup]="addProductForm" (ngSubmit)="submitProduct()" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -57,8 +61,17 @@ import { lastValueFrom } from 'rxjs';
 
             <div class="lg:col-span-2 grid gap-3">
               <label class="text-sm font-medium text-gray-600">Thumbnail image</label>
-              <input type="file" accept="image/*" (change)="onThumbnailSelected($event)" class="w-full border border-gray-300 rounded-lg p-2" />
-              <input formControlName="imageUrl" placeholder="Thumbnail URL fallback" class="w-full border border-gray-300 rounded-lg px-3 py-2" />
+              
+              @if (thumbnailPreview) {
+                <div class="relative w-32 h-32 border rounded-lg overflow-hidden group mb-2">
+                  <img [src]="thumbnailPreview" class="w-full h-full object-cover">
+                  <button type="button" (click)="clearThumbnail()" class="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                    <mat-icon class="text-sm">delete</mat-icon>
+                  </button>
+                </div>
+              } @else {
+                <input type="file" accept="image/*" (change)="onThumbnailSelected($event)" class="w-full border border-gray-300 rounded-lg p-2" />
+              }
             </div>
 
             <div class="lg:col-span-2 grid gap-3">
@@ -71,6 +84,21 @@ import { lastValueFrom } from 'rxjs';
                     <div class="relative w-24 h-24 border rounded-lg overflow-hidden group">
                       <img [src]="url" class="w-full h-full object-cover">
                       <button type="button" (click)="removeExistingImage(i)" class="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <mat-icon class="text-sm">delete</mat-icon>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- New Image Upload previews -->
+              @if (productImageFiles.length > 0) {
+                <div class="flex flex-wrap gap-2 mb-2 mt-2">
+                  <p class="w-full text-xs text-gray-500 font-medium">New uploads:</p>
+                  @for (img of productImageFiles; track img.url; let i = $index) {
+                    <div class="relative w-24 h-24 border rounded-lg overflow-hidden group">
+                      <img [src]="img.url" class="w-full h-full object-cover border-2 border-brand-green/30">
+                      <button type="button" (click)="removeProductImage(i)" class="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <mat-icon class="text-sm">delete</mat-icon>
                       </button>
                     </div>
@@ -98,41 +126,134 @@ import { lastValueFrom } from 'rxjs';
                 </div>
               }
 
+              <!-- New Video Upload previews -->
+              @if (productVideoFiles.length > 0) {
+                <div class="flex flex-wrap gap-2 mb-2 mt-2">
+                  <p class="w-full text-xs text-gray-500 font-medium">New uploads:</p>
+                  @for (vid of productVideoFiles; track vid.url; let i = $index) {
+                    <div class="relative w-32 h-20 border rounded-lg bg-gray-100 flex items-center justify-center group overflow-hidden border-2 border-brand-green/30">
+                      <video [src]="vid.url" class="w-full h-full object-cover"></video>
+                      <button type="button" (click)="removeProductVideo(i)" class="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <mat-icon class="text-sm">delete</mat-icon>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+
               <input type="file" accept="video/*" multiple (change)="onProductVideosSelected($event)" class="w-full border border-gray-300 rounded-lg p-2" />
             </div>
 
-            <div class="lg:col-span-2 flex flex-wrap gap-3 justify-end">
-              <button type="submit" [disabled]="addProductForm.invalid || uploading()" class="bg-dv-green disabled:opacity-50 text-white px-5 py-2 rounded-lg shadow-sm hover:bg-green-700 transition">
-                {{ uploading() ? 'Creating...' : 'Create Product' }}
+            <div class="lg:col-span-2 flex flex-wrap gap-3 justify-end items-center mt-4">
+              <button type="button" (click)="cancelEdit()" class="border border-gray-300 px-6 py-2 rounded-lg hover:bg-gray-100 transition font-medium">Cancel</button>
+              <button type="submit" [disabled]="addProductForm.invalid || uploading()" class="bg-dv-green disabled:opacity-50 text-white px-8 py-2 rounded-lg shadow-sm hover:bg-green-700 transition font-medium">
+                @if (uploading()) {
+                  {{ editingProductId ? 'Updating...' : 'Creating...' }}
+                } @else {
+                  {{ editingProductId ? 'Update Product' : 'Create Product' }}
+                }
               </button>
-              <button type="button" (click)="showAddProduct.set(false)" class="border border-gray-300 px-5 py-2 rounded-lg hover:bg-gray-100 transition">Cancel</button>
             </div>
           </form>
         </section>
       }
 
       <div class="border-b border-gray-200 mb-6">
-        <nav class="-mb-px flex space-x-8">
-          <button (click)="activeTab.set('products')" [class.text-dv-green]="activeTab() === 'products'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Products</button>
-          <button (click)="activeTab.set('orders')" [class.text-dv-green]="activeTab() === 'orders'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Orders</button>
-          <button (click)="activeTab.set('coupons')" [class.text-dv-green]="activeTab() === 'coupons'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Coupons</button>
+        <nav class="-mb-px flex space-x-8 overflow-x-auto">
+          <button (click)="activeTab.set('analytics')" [class.text-dv-green]="activeTab() === 'analytics'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Analytics</button>
+          <button (click)="activeTab.set('products')" [class.text-dv-green]="activeTab() === 'products'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Products</button>
+          <button (click)="activeTab.set('orders')" [class.text-dv-green]="activeTab() === 'orders'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Orders</button>
+          <button (click)="activeTab.set('coupons')" [class.text-dv-green]="activeTab() === 'coupons'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Coupons</button>
+          <button (click)="activeTab.set('settings')" [class.text-dv-green]="activeTab() === 'settings'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Store Settings</button>
         </nav>
       </div>
 
       <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        @if (activeTab() === 'products') {
+        @if (activeTab() === 'analytics') {
+          <div class="p-6 space-y-8">
+            @if (analytics(); as data) {
+              <!-- KPI Cards -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl">
+                  <p class="text-sm font-medium text-gray-500 mb-1">Total Revenue</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ data.totalRevenue | currency:'INR':'symbol':'1.0-0' }}</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl">
+                  <p class="text-sm font-medium text-gray-500 mb-1">Total Orders</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ data.totalOrders }}</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl">
+                  <p class="text-sm font-medium text-gray-500 mb-1">Prepaid Revenue</p>
+                  <p class="text-2xl font-bold text-green-700">{{ data.prepaidRevenue | currency:'INR':'symbol':'1.0-0' }}</p>
+                  <p class="text-xs text-gray-400 mt-1">From {{ data.prepaidOrders }} orders</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl">
+                  <p class="text-sm font-medium text-gray-500 mb-1">COD Revenue / Expected</p>
+                  <p class="text-2xl font-bold text-yellow-600">{{ data.codRevenue | currency:'INR':'symbol':'1.0-0' }}</p>
+                  <p class="text-xs text-gray-400 mt-1">From {{ data.codOrders }} orders</p>
+                </div>
+              </div>
+
+              <!-- Top Selling Products -->
+              <div class="mt-8 border border-gray-100 rounded-2xl p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Top 5 Best Selling Products</h3>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-100">
+                    <thead>
+                      <tr>
+                        <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider pb-3">Product</th>
+                        <th class="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-3">Units Sold</th>
+                        <th class="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-3">Revenue Gen.</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                      @for (metric of data.topSellingProducts; track metric.productId) {
+                        <tr class="hover:bg-gray-50 transition-colors">
+                          <td class="py-3">
+                            <div class="flex items-center gap-3">
+                              <img [src]="metric.imageUrl || 'assets/images/placeholder-product.webp'" class="w-10 h-10 object-cover rounded-lg border">
+                              <p class="text-sm font-medium text-gray-900 truncate">{{ metric.productName }}</p>
+                            </div>
+                          </td>
+                          <td class="py-3 text-right text-sm font-semibold text-gray-700">{{ metric.totalQuantitySold }}</td>
+                          <td class="py-3 text-right text-sm font-bold text-dv-green">{{ metric.totalRevenueGenerated | currency:'INR':'symbol':'1.0-0' }}</td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="3" class="py-8 text-center text-sm text-gray-500">No sales data available yet.</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            } @else {
+              <div class="flex items-center justify-center py-20 text-gray-400">
+                <mat-icon class="animate-spin mr-2">refresh</mat-icon> Loading analytics...
+              </div>
+            }
+          </div>
+        } @else if (activeTab() === 'products') {
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-100">
               <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs">Product</th><th class="px-6 py-3 text-left text-xs">Price</th><th class="px-6 py-3 text-left text-xs">Stock</th><th class="px-6 py-3 text-right text-xs">Actions</th></tr></thead>
               <tbody class="divide-y divide-gray-100">
                 @for (p of products(); track p.id) {
                   <tr>
-                    <td class="px-6 py-4"><div class="flex items-center gap-3"><img class="h-10 w-10 rounded-lg object-cover border" [src]="p.imageUrl" alt=""><div><div class="text-sm font-medium">{{ p.name }}</div><div class="text-xs text-gray-500">ID: {{ p.id }}</div></div></div></td>
+                    <td class="px-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <img class="h-10 w-10 rounded-lg object-cover border flex-shrink-0" [src]="p.imageUrl" alt="">
+                        <div class="min-w-0">
+                          <div class="text-sm font-medium text-gray-900 truncate">{{ p.name }}</div>
+                          <div class="text-xs text-gray-500 truncate w-24 sm:w-full">ID: {{ p.id }}</div>
+                        </div>
+                      </div>
+                    </td>
                     <td class="px-6 py-4 text-sm">{{ p.price | currency:'INR':'symbol':'1.0-0' }}</td>
                     <td class="px-6 py-4 text-sm">{{ p.stock }}</td>
                     <td class="px-6 py-4 text-right text-sm flex justify-end gap-2">
                       <button (click)="editProduct(p)" class="text-blue-600 hover:text-blue-800">Edit</button>
-                      <button (click)="deleteProduct(p.id)" class="text-red-500">Delete</button>
+                      <button (click)="confirmDelete('product', p.id, p.name)" class="text-red-500 hover:text-red-700">Delete</button>
                     </td>
                   </tr>
                 }
@@ -140,51 +261,503 @@ import { lastValueFrom } from 'rxjs';
             </table>
           </div>
         } @else if (activeTab() === 'orders') {
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-100">
-              <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs">Order ID</th><th class="px-6 py-3 text-left text-xs">Customer</th><th class="px-6 py-3 text-left text-xs">Status</th></tr></thead>
-              <tbody class="divide-y divide-gray-100">
-                @for (order of orders(); track order.id) {
-                <tr>
-                  <td class="px-6 py-4 text-sm font-mono">{{ order.id }}</td>
-                  <td class="px-6 py-4 text-sm">{{ order.razorpayOrderId || '-' }}</td>
-                  <td class="px-6 py-4 text-sm">{{ order.orderStatus }}</td>
-                </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        } @else {
-          <div class="p-4">
-            <form [formGroup]="couponForm" (ngSubmit)="createCoupon()" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-              <input formControlName="code" placeholder="Coupon code" class="border rounded-md px-3 py-2" />
-              <select formControlName="type" class="border rounded-md px-3 py-2">
-                <option value="PERCENTAGE">Percentage</option>
-                <option value="FIXED">Fixed</option>
-                <option value="BXGX">BXGX</option>
-              </select>
-              <input formControlName="discountValue" type="number" placeholder="Discount value" class="border rounded-md px-3 py-2" />
-              <input formControlName="minimumCartValue" type="number" placeholder="Minimum cart value" class="border rounded-md px-3 py-2" />
-              <input formControlName="buyQty" type="number" placeholder="Buy qty" class="border rounded-md px-3 py-2" />
-              <input formControlName="getQty" type="number" placeholder="Get qty" class="border rounded-md px-3 py-2" />
-              <button type="submit" class="bg-dv-green text-white rounded-md px-4 py-2">Create Coupon</button>
-            </form>
-            <div class="space-y-2">
-              @for (c of coupons(); track c.id) {
-                <div class="border rounded-md p-3 flex justify-between items-center">
-                  <div>
-                    <p class="font-medium">{{ c.code }} <span class="text-xs bg-gray-100 px-2 py-0.5 rounded">{{ c.type }}</span></p>
-                    <p class="text-xs text-gray-500">Min: {{ c.minimumCartValue || 0 }} | Discount: {{ c.discountValue || 0 }}</p>
+          <div class="p-4 md:p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <h2 class="text-xl font-bold text-gray-800">Order Management</h2>
+              <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div class="relative w-full sm:w-auto sm:min-w-[280px]">
+                  <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 scale-90">search</mat-icon>
+                  <input 
+                    type="text" 
+                    [value]="ordersSearch()"
+                    (input)="onSearch($any($event.target).value)"
+                    placeholder="Search name, email, phone..." 
+                    class="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-dv-green/20 focus:border-dv-green outline-none transition-all"
+                  />
+                </div>
+                <!-- Custom Status Dropdown -->
+                <div class="relative w-full sm:w-auto" style="min-width:0">
+                  <button
+                    type="button"
+                    (click)="showStatusDropdown.set(!showStatusDropdown())"
+                    (blur)="closeStatusDropdownDelayed()"
+                    class="w-full sm:min-w-[160px] flex items-center justify-between gap-2 px-4 py-2 text-sm border border-gray-200 rounded-xl bg-white shadow-sm cursor-pointer hover:border-dv-green transition-colors outline-none focus:ring-2 focus:ring-dv-green/20"
+                  >
+                    <span class="truncate text-gray-700">{{ statusLabel() }}</span>
+                    <mat-icon class="shrink-0 text-gray-400 transition-transform" [class.rotate-180]="showStatusDropdown()">expand_more</mat-icon>
+                  </button>
+                  @if (showStatusDropdown()) {
+                    <div class="absolute left-0 top-full mt-1 w-full sm:min-w-[180px] bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-y-auto max-h-52">
+                      @for (opt of statusOptions; track opt.value) {
+                        <button
+                          type="button"
+                          (mousedown)="onFilter(opt.value); showStatusDropdown.set(false)"
+                          class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+                          [class.text-dv-green]="(ordersStatus() || 'ALL') === opt.value"
+                          [class.font-semibold]="(ordersStatus() || 'ALL') === opt.value"
+                        >
+                          {{ opt.label }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            @if (!ordersPage()?.content?.length) {
+              <div class="flex flex-col items-center justify-center py-24 bg-gradient-to-b from-gray-50 to-white rounded-3xl border border-dashed border-gray-200 shadow-inner">
+                <div class="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 border border-gray-100/50">
+                  <mat-icon class="text-gray-300 text-3xl h-8 w-8">search_off</mat-icon>
+                </div>
+                <p class="text-gray-500 font-bold text-lg">No orders matches your search</p>
+                <p class="text-gray-400 text-sm mt-1 mb-6 text-center max-w-xs">Adjust your filters or search term to find what you're looking for.</p>
+                <button (click)="onSearch(''); onFilter('ALL')" class="flex items-center gap-2 bg-white text-dv-green text-sm font-bold px-6 py-2.5 rounded-xl border border-dv-green shadow-sm hover:bg-green-50 transition-all active:scale-95">
+                  <mat-icon class="text-[18px]">filter_list_off</mat-icon> Reset All Filters
+                </button>
+              </div>
+            } @else {
+              <div class="space-y-4">
+                @for (order of ordersPage()?.content; track order.id) {
+                  <div class="group relative bg-white border border-gray-100 rounded-[2rem] p-1 hover:border-dv-green/30 hover:shadow-2xl hover:shadow-dv-green/5 transition-all duration-500 cursor-pointer overflow-hidden" (click)="toggleOrder(order.id)">
+                    
+                    <div class="p-5 md:p-6 transition-all duration-300" [class.bg-gray-50/50]="expandedOrderId() === order.id">
+                      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                        
+                        <div class="flex-1 min-w-0">
+                          <!-- Status Bar -->
+                          <div class="flex flex-wrap items-center gap-3 mb-4">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-gray-900 text-white shadow-sm ring-1 ring-white/10">
+                              #{{ order.id.substring(0, 8) }}
+                            </span>
+                            
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                                  [class.bg-amber-100]="order.orderStatus === 'PENDING'"
+                                  [class.text-amber-700]="order.orderStatus === 'PENDING'"
+                                  [class.bg-sky-100]="order.orderStatus === 'PAYMENT_SUCCESS'"
+                                  [class.text-sky-700]="order.orderStatus === 'PAYMENT_SUCCESS'"
+                                  [class.bg-indigo-100]="order.orderStatus === 'SHIPPED'"
+                                  [class.text-indigo-700]="order.orderStatus === 'SHIPPED'"
+                                  [class.bg-emerald-100]="order.orderStatus === 'DELIVERED'"
+                                  [class.text-emerald-700]="order.orderStatus === 'DELIVERED'"
+                                  [class.bg-rose-100]="order.orderStatus === 'CANCELLED'"
+                                  [class.text-rose-700]="order.orderStatus === 'CANCELLED'">
+                              <span class="w-1.5 h-1.5 rounded-full mr-2" 
+                                    [class.bg-amber-500]="order.orderStatus === 'PENDING'"
+                                    [class.bg-sky-500]="order.orderStatus === 'PAYMENT_SUCCESS'"
+                                    [class.bg-indigo-500]="order.orderStatus === 'SHIPPED'"
+                                    [class.bg-emerald-500]="order.orderStatus === 'DELIVERED'"
+                                    [class.bg-rose-500]="order.orderStatus === 'CANCELLED'"></span>
+                              {{ order.orderStatus === 'PAYMENT_SUCCESS' ? (order.paymentMethod === 'COD' ? 'ORDER CONFIRMED' : 'PAYMENT SUCCESS') : order.orderStatus.replace('_', ' ') }}
+                            </span>
+
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-colors shadow-sm"
+                                  [class.bg-green-50]="order.paymentStatus === 'SUCCESS'"
+                                  [class.text-green-700]="order.paymentStatus === 'SUCCESS'"
+                                  [class.border-green-100]="order.paymentStatus === 'SUCCESS'"
+                                  [class.bg-amber-50]="order.paymentStatus === 'PENDING' && order.orderStatus !== 'CANCELLED'"
+                                  [class.text-amber-700]="order.paymentStatus === 'PENDING' && order.orderStatus !== 'CANCELLED'"
+                                  [class.border-amber-100]="order.paymentStatus === 'PENDING' && order.orderStatus !== 'CANCELLED'"
+                                  [class.bg-red-50]="order.paymentStatus === 'FAILED' || order.orderStatus === 'CANCELLED'"
+                                  [class.text-red-700]="order.paymentStatus === 'FAILED' || order.orderStatus === 'CANCELLED'"
+                                  [class.border-red-100]="order.paymentStatus === 'FAILED' || order.orderStatus === 'CANCELLED'">
+                              <mat-icon class="text-[12px] w-3 h-3 mr-1">{{ order.paymentStatus === 'SUCCESS' ? 'verified' : ((order.paymentStatus === 'FAILED' || order.orderStatus === 'CANCELLED') ? 'error_outline' : 'schedule') }}</mat-icon>
+                              {{ order.orderStatus === 'CANCELLED' ? 'FAILED' : (order.paymentStatus === 'SUCCESS' ? 'PAID' : (order.paymentMethod === 'COD' && order.paymentStatus === 'PENDING' ? 'COD' : order.paymentStatus)) }}
+                            </span>
+                          </div>
+
+                          <!-- Core Info -->
+                          <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                            <div class="flex items-baseline gap-1">
+                               <span class="text-gray-400 text-xs font-medium">₹</span>
+                               <span class="text-2xl font-black text-gray-900 tracking-tight">{{ order.totalAmount }}</span>
+                            </div>
+                            
+                            <div class="hidden sm:block h-8 w-px bg-gray-200/60 shadow-inner"></div>
+                            
+                            <div class="min-w-0">
+                              <p class="text-sm font-bold text-gray-800 truncate group-hover:text-dv-green transition-colors">{{ order.customerName || 'Guest User' }}</p>
+                              <p class="text-xs text-gray-400 font-medium truncate flex items-center gap-1.5">
+                                <mat-icon class="text-[14px] w-3.5 h-3.5">mail</mat-icon>
+                                {{ order.customerEmail || 'no-email provided' }}
+                              </p>
+                            </div>
+                          </div>
+
+                          <!-- Delivery Tag (Animated on Hover) -->
+                          @if (order.trackingId) {
+                            <div class="flex items-center gap-2 mt-4 bg-gray-900/5 text-gray-600 w-fit px-3 py-1.5 rounded-xl border border-black/5 hover:bg-gray-900 hover:text-white transition-all duration-300">
+                               <mat-icon class="text-[14px] w-3.5 h-3.5">local_shipping</mat-icon>
+                               <span class="text-[10px] font-black uppercase tracking-widest">Tracking Info</span>
+                               <span class="text-[10px] font-mono opacity-60">#{{ order.trackingId }}</span>
+                            </div>
+                          }
+                        </div>
+
+                        <!-- Date & Expand -->
+                        <div class="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-4 pt-4 lg:pt-0 border-t lg:border-t-0 border-gray-100/60">
+                          <div class="flex flex-col items-end">
+                            <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Created At</span>
+                            <span class="text-xs font-bold text-gray-600 bg-white shadow-sm ring-1 ring-black/5 px-3 py-1.5 rounded-xl whitespace-nowrap">
+                              {{ order.createdAt ? (order.createdAt | date:'MMM d, yyyy') : 'N/A' }}
+                              <span class="text-[10px] font-medium text-gray-400 ml-1">{{ order.createdAt | date:'h:mm a' }}</span>
+                            </span>
+                          </div>
+                          
+                          <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 group-hover:bg-dv-green group-hover:text-white transition-all shadow-sm ring-1 ring-black/5 hover:shadow-dv-green/20" [class.rotate-180]="expandedOrderId() === order.id">
+                            <mat-icon class="text-[20px]">expand_more</mat-icon>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Expanded Details Panel -->
+                    @if (expandedOrderId() === order.id) {
+                      <div class="px-6 pb-8 pt-2 animate-fadeIn" (click)="$event.stopPropagation()">
+                        <div class="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-8"></div>
+                        
+                        <div class="grid lg:grid-cols-5 gap-8">
+                          <!-- Left: Delivery Info -->
+                          <div class="lg:col-span-2 space-y-6">
+                            <div>
+                              <div class="flex items-center gap-3 mb-4">
+                                <div class="w-8 h-8 rounded-lg bg-dv-green/10 flex items-center justify-center">
+                                  <mat-icon class="text-dv-green text-[18px]">location_on</mat-icon>
+                                </div>
+                                <h4 class="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Shipping Details</h4>
+                              </div>
+                              
+                              <div class="bg-gray-50/80 rounded-[1.5rem] p-5 border border-white shadow-sm ring-1 ring-black/5">
+                                 <p class="text-sm font-black text-gray-900 mb-1 flex items-center gap-2">
+                                   {{ order.shippingFirstName || order.customerName }} {{ order.shippingLastName || '' }}
+                                   <span class="text-[10px] font-bold bg-white px-2 py-0.5 rounded-full border border-black/5 shadow-sm">RECIPIENT</span>
+                                 </p>
+                                 <p class="text-sm text-gray-600 mt-2 leading-relaxed font-medium">
+                                   {{ order.shippingAddress || 'No address provided' }}<br>
+                                   <span class="text-gray-400">{{ order.shippingCity || '' }}{{ order.shippingCity && order.shippingState ? ',' : '' }} {{ order.shippingState || '' }} {{ order.shippingPostalCode || '' }}</span>
+                                 </p>
+                                 
+                                 <div class="mt-4 pt-4 border-t border-gray-200/40 flex items-center gap-3">
+                                    <div class="p-2 rounded-xl bg-white shadow-sm ring-1 ring-black/5">
+                                      <mat-icon class="text-[16px] w-4 h-4 text-dv-green">phone_in_talk</mat-icon>
+                                    </div>
+                                    <div>
+                                      <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Support Contact</p>
+                                      <span class="text-xs font-black text-gray-900 tracking-wider">{{ order.shippingPhone || 'N/A' }}</span>
+                                    </div>
+                                 </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Right: Item Breakdown -->
+                          <div class="lg:col-span-3">
+                            <div class="flex items-center justify-between mb-4">
+                              <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                                  <mat-icon class="text-amber-500 text-[18px]">shopping_basket</mat-icon>
+                                </div>
+                                <h4 class="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Order Breakdown</h4>
+                              </div>
+                              <span class="text-[10px] font-bold bg-gray-50 px-3 py-1 rounded-full border border-black/5">{{ order.items?.length || 0 }} Items</span>
+                            </div>
+                            
+                            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                              @for (item of (order.items || []); track item.productId) {
+                                <div class="group/item flex items-center gap-4 bg-white hover:bg-gray-50 border border-gray-100 p-2.5 rounded-[1.25rem] transition-all duration-300 shadow-sm hover:shadow-md ring-1 ring-transparent hover:ring-dv-green/10">
+                                  <div class="relative w-14 h-14 rounded-xl border border-gray-100 overflow-hidden shadow-inner flex-shrink-0">
+                                    <img [src]="item.imageUrl || 'assets/images/placeholder-product.webp'" class="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500">
+                                    <div class="absolute top-1 right-1 w-5 h-5 bg-gray-900 border border-white/20 rounded-lg flex items-center justify-center shadow-lg">
+                                       <span class="text-[9px] font-black text-white">{{ item.quantity }}</span>
+                                    </div>
+                                  </div>
+                                  
+                                  <div class="min-w-0 flex-1">
+                                    <p class="text-xs font-black text-gray-900 truncate tracking-tight mb-0.5">{{ item.productName }}</p>
+                                    <div class="flex items-center gap-2">
+                                       <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{{ item.unitPrice | currency:'INR':'symbol':'1.0-0' }} per unit</span>
+                                       <span class="w-1 h-1 rounded-full bg-gray-200"></span>
+                                       <span class="text-[10px] font-bold text-dv-green/80 uppercase tracking-tighter">In Stock Order</span>
+                                    </div>
+                                  </div>
+                                  
+                                  <div class="px-4 py-2 bg-gray-50/50 group-hover/item:bg-white rounded-xl text-right transition-colors border border-transparent group-hover/item:border-gray-100">
+                                    <p class="text-sm font-black text-gray-900 tracking-tight">{{ (item.quantity * item.unitPrice) | currency:'INR':'symbol':'1.0-0' }}</p>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                            
+                            <!-- Total Summary -->
+                            <div class="mt-6 p-5 bg-gray-900 rounded-[1.5rem] shadow-2xl shadow-gray-900/10">
+                              <div class="flex items-center justify-between text-white/50 text-[10px] font-black uppercase tracking-[0.2em] mb-3">
+                                <span>Grand Billing Total</span>
+                                <mat-icon class="text-[16px] w-4 h-4">payments</mat-icon>
+                              </div>
+                              <div class="flex items-baseline justify-between">
+                                <span class="text-white/40 text-xs font-medium">Inclusive of all taxes & shipping</span>
+                                <span class="text-2xl font-black text-white tracking-tighter">{{ order.totalAmount | currency:'INR':'symbol':'1.0-0' }}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    }
                   </div>
-                  <button (click)="deleteCoupon(c.id)" class="text-red-600 text-sm">Delete</button>
+                }
+              </div>
+
+              <!-- Modern Pagination Footer -->
+              @if (ordersPage(); as page) {
+                <div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <p class="text-xs font-medium text-gray-500">
+                    Showing <span class="text-gray-900 font-bold">{{ page.content.length }}</span> of <span class="text-gray-900 font-bold">{{ page.totalElements }}</span> total orders
+                  </p>
+                  <div class="flex items-center gap-2">
+                    <button 
+                      [disabled]="page.pageNumber === 0"
+                      (click)="onPageChange(page.pageNumber - 1)"
+                      class="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-xl hover:bg-white hover:border-dv-green hover:text-dv-green disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:text-gray-400 transition-all cursor-pointer"
+                    >
+                      <mat-icon class="text-[20px]">chevron_left</mat-icon>
+                    </button>
+                    
+                    <div class="flex items-center px-4 h-10 text-xs font-black text-gray-700 bg-white border border-gray-200 rounded-xl shadow-sm">
+                      PAGE {{ page.pageNumber + 1 }} / {{ page.totalPages || 1 }}
+                    </div>
+
+                    <button 
+                      [disabled]="page.last || page.totalPages <= 1"
+                      (click)="onPageChange(page.pageNumber + 1)"
+                      class="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-xl hover:bg-white hover:border-dv-green hover:text-dv-green disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:text-gray-400 transition-all cursor-pointer"
+                    >
+                      <mat-icon class="text-[20px]">chevron_right</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        } @else if (activeTab() === 'coupons') {
+          <div class="p-6">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h2 class="text-xl font-bold text-gray-800">Coupon Management</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Create and manage active coupon campaigns.</p>
+              </div>
+              @if (!showCouponForm()) {
+                <button (click)="openAddCoupon()" class="flex items-center gap-2 bg-dv-green text-white text-sm font-medium px-4 py-2 rounded-xl shadow-sm hover:bg-green-700 transition-colors">
+                  <mat-icon class="text-[18px]">add</mat-icon> Add Coupon
+                </button>
+              }
+            </div>
+
+            <!-- Add / Edit Form Panel -->
+            @if (showCouponForm()) {
+              <div class="bg-gray-50 border border-gray-100 rounded-2xl p-6 mb-8 relative">
+                <div class="flex items-center justify-between mb-5">
+                  <h3 class="text-md font-semibold text-gray-700">{{ editingCouponId() ? 'Edit Coupon' : 'Issue New Coupon' }}</h3>
+                  <button type="button" (click)="closeCouponForm()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-200 transition">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+                <form [formGroup]="couponForm" (ngSubmit)="saveCoupon()" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Coupon Code</label>
+                    <input formControlName="code" placeholder="e.g. SUMMER50" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20 font-mono uppercase" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Discount Type</label>
+                    <select formControlName="type" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20 bg-white">
+                      <option value="PERCENTAGE">Percentage (%)</option>
+                      <option value="FIXED">Flat Fixed Amount (₹)</option>
+                      <option value="BXGX">Buy X Get Y (BXGX)</option>
+                    </select>
+                  </div>
+
+                  @if (couponForm.get('type')?.value !== 'BXGX') {
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Discount Amount</label>
+                      <input formControlName="discountValue" type="number" placeholder="Percentage or Flat amount" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
+                    </div>
+                  }
+
+                  @if (couponForm.get('type')?.value === 'BXGX') {
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">BXGX: Buy Qty</label>
+                      <input formControlName="buyQty" type="number" placeholder="E.g 1" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">BXGX: Get Qty</label>
+                      <input formControlName="getQty" type="number" placeholder="E.g 1" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
+                    </div>
+                  }
+
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Minimum Cart (₹)</label>
+                    <input formControlName="minimumCartValue" type="number" placeholder="0 for no minimum" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Applicable Product</label>
+                    <select formControlName="productId" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20 bg-white">
+                      <option value="">Entire Store (All Products)</option>
+                      @for (p of products(); track p.id) {
+                        <option [value]="p.id">{{ p.name }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Total Store Limits (Empty = ∞)</label>
+                    <input formControlName="maxUses" type="number" placeholder="Max uses e.g. 50" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Max Per User (Empty = ∞)</label>
+                    <input formControlName="maxUsesPerUser" type="number" placeholder="Max per user e.g. 1" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Expiration Date</label>
+                    <input formControlName="expiresAt" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20 text-gray-700" />
+                  </div>
+
+                  <div class="flex items-end gap-3 md:col-span-2 lg:col-span-3">
+                    <button type="button" (click)="closeCouponForm()" class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition">Cancel</button>
+                    <button type="submit" [disabled]="couponForm.invalid" class="flex-1 bg-dv-green text-white font-medium rounded-lg px-4 py-2.5 shadow-sm hover:bg-green-700 transition-colors disabled:opacity-50">
+                      {{ editingCouponId() ? 'Update Coupon' : 'Create Coupon' }}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            }
+
+            <!-- Coupon List -->
+            <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Active &amp; Scheduled</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              @for (c of coupons(); track c.id) {
+                <div class="border border-gray-100 bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-1.5">
+                        <p class="font-bold text-gray-900 text-lg uppercase tracking-wide truncate">{{ c.code }}</p>
+                        <span class="shrink-0 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 px-2.5 py-0.5 rounded-full">{{ c.type === 'PERCENTAGE' ? '% OFF' : (c.type === 'FIXED' ? 'FLAT OFF' : 'BOGO') }}</span>
+                      </div>
+                      @if (c.type === 'BXGX') {
+                        <p class="text-sm text-gray-500">Buy <span class="font-semibold text-gray-700">{{ c.buyQty }}</span> Get <span class="font-semibold text-gray-700">{{ c.getQty }}</span> free</p>
+                      } @else {
+                        <p class="text-sm text-gray-500">Discount: <span class="font-semibold text-gray-700">{{ c.type === 'PERCENTAGE' ? (c.discountValue + '%') : (c.discountValue | currency:'INR':'symbol':'1.0-0') }}</span></p>
+                      }
+                      @if (c.productId) {
+                        <p class="text-xs font-semibold text-dv-green mt-1">Specific Product Target</p>
+                      } @else {
+                        <p class="text-xs text-gray-400 mt-1">Min Cart: <span class="font-semibold">{{ c.minimumCartValue || 0 | currency:'INR':'symbol':'1.0-0' }}</span></p>
+                      }
+                      <div class="flex gap-3 mt-2">
+                        <p class="text-[10px] font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded">Used: <span class="text-gray-900 font-bold">{{ c.usageCount || 0 }}</span> / {{ c.maxUses || '∞' }}</p>
+                        <p class="text-[10px] font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded">Limit/User: <span class="text-gray-900 font-bold">{{ c.maxUsesPerUser || '∞' }}</span></p>
+                      </div>
+                      @if (c.expiresAt) {
+                        <div class="flex items-center gap-1 mt-2.5 bg-red-50 text-red-600 w-fit px-2 py-0.5 rounded text-xs font-semibold border border-red-100">
+                          <mat-icon class="text-[12px] w-[12px] h-[12px]">timer</mat-icon> Expires {{ c.expiresAt | date:'medium' }}
+                        </div>
+                      }
+                    </div>
+                    <!-- Actions -->
+                    <div class="flex flex-col gap-1 shrink-0">
+                      <button (click)="editCoupon(c)" class="text-blue-500 hover:text-blue-700 p-1.5 rounded-lg hover:bg-blue-50 transition flex items-center justify-center" title="Edit">
+                        <mat-icon class="text-[20px]">edit</mat-icon>
+                      </button>
+                      <button (click)="confirmDelete('coupon', c.id, c.code)" class="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 flex items-center justify-center" title="Delete">
+                        <mat-icon class="text-[20px]">delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               } @empty {
-                <p class="text-sm text-gray-500">No coupons yet.</p>
+                <div class="col-span-full border-2 border-dashed border-gray-200 rounded-2xl p-10 flex flex-col items-center justify-center">
+                  <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                    <mat-icon class="text-gray-400">local_offer</mat-icon>
+                  </div>
+                  <p class="text-sm font-medium text-gray-900">No promotional coupons yet</p>
+                  <p class="text-xs text-gray-500 mt-1">Click <strong>Add Coupon</strong> above to create one.</p>
+                </div>
               }
             </div>
           </div>
+        } @else if (activeTab() === 'settings') {
+          <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-xl font-bold text-gray-800">Global Store Configuration</h2>
+              @if (!editConfigMode()) {
+                 <button type="button" (click)="enableConfigEdit()" class="text-sm font-medium text-dv-green border border-dv-green rounded-lg px-4 py-1.5 hover:bg-green-50 transition-colors">Edit Settings</button>
+              } @else {
+                 <button type="button" (click)="cancelConfigEdit()" class="text-sm font-medium text-gray-500 hover:text-gray-700 underline text-right">Cancel Edit</button>
+              }
+            </div>
+
+            <form [formGroup]="configForm" (ngSubmit)="saveConfig()" class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl" [class.opacity-60]="!editConfigMode()">
+              <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Free Shipping Threshold</label>
+                <p class="text-xs text-gray-500 mb-3">Orders above this amount will qualify for completely free shipping.</p>
+                <div class="relative rounded-md shadow-sm">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <span class="text-gray-500 sm:text-sm">₹</span>
+                  </div>
+                  <input formControlName="freeShippingThreshold" type="number" class="block w-full rounded-md border-gray-300 pl-7 focus:border-dv-green focus:ring-dv-green sm:text-sm border py-2 disabled:bg-gray-100" placeholder="e.g. 5000">
+                </div>
+              </div>
+              
+              <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Standard Shipping Cost</label>
+                <p class="text-xs text-gray-500 mb-3">The flat shipping fee explicitly applied to all standard orders.</p>
+                <div class="relative rounded-md shadow-sm">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <span class="text-gray-500 sm:text-sm">₹</span>
+                  </div>
+                  <input formControlName="standardShippingCost" type="number" class="block w-full rounded-md border-gray-300 pl-7 focus:border-dv-green focus:ring-dv-green sm:text-sm border py-2 disabled:bg-gray-100" placeholder="e.g. 150">
+                </div>
+              </div>
+
+              <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Cash on Delivery (COD) Fee</label>
+                <p class="text-xs text-gray-500 mb-3">The extra handling charge applied if the buyer chooses COD.</p>
+                <div class="relative rounded-md shadow-sm">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <span class="text-gray-500 sm:text-sm">₹</span>
+                  </div>
+                  <input formControlName="codFee" type="number" class="block w-full rounded-md border-gray-300 pl-7 focus:border-dv-green focus:ring-dv-green sm:text-sm border py-2 disabled:bg-gray-100" placeholder="e.g. 50">
+                </div>
+              </div>
+              
+              @if (editConfigMode()) {
+                <div class="md:col-span-2 pt-4 flex justify-end">
+                  <button type="submit" [disabled]="configForm.invalid || !configForm.dirty" class="bg-dv-green text-white rounded-lg px-6 py-2.5 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">Save Configuration</button>
+                </div>
+              }
+            </form>
+          </div>
         }
       </div>
+      
+      <!-- Delete Confirmation Modal -->
+      @if (deleteConfirm()) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div class="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl transform transition-all">
+            <div class="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mb-5 mx-auto shadow-inner">
+              <mat-icon class="text-red-500 w-8 h-8 text-[32px] flex items-center justify-center">warning_amber</mat-icon>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Delete {{ deleteConfirm()?.type === 'product' ? 'Product' : 'Coupon' }}?</h3>
+            <p class="text-sm text-gray-500 text-center mb-6">Are you sure you want to delete <strong class="text-gray-800 font-semibold">{{ deleteConfirm()?.name }}</strong>? This action cannot be undone.</p>
+            <div class="flex gap-3">
+              <button (click)="deleteConfirm.set(null)" class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-medium transition-colors">Cancel</button>
+              <button (click)="executeDelete()" class="flex-1 px-4 py-2.5 bg-red-600 text-white hover:bg-red-700 rounded-xl font-medium transition-colors shadow-md shadow-red-500/20">Delete</button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -192,13 +765,47 @@ export class AdminDashboardComponent {
   private api = inject(ApiService);
   private snackbar = inject(SnackbarService);
   private fb = inject(FormBuilder);
-  activeTab = signal<'products' | 'orders' | 'coupons'>('products');
+  activeTab = signal<'products' | 'orders' | 'coupons' | 'settings' | 'analytics'>('analytics');
+  expandedOrderId = signal<string | null>(null);
   showAddProduct = signal(false);
   showAdvanced = signal(false);
   uploading = signal(false);
+  showCouponForm = signal(false);
+  editingCouponId = signal<string | null>(null);
+  showStatusDropdown = signal(false);
+  deleteConfirm = signal<{ type: 'product' | 'coupon', id: string, name: string } | null>(null);
   products = signal<ProductResponse[]>([]);
-  orders = signal<OrderResponse[]>([]);
+  ordersPage = signal<PageResponse<OrderResponse> | null>(null);
+  ordersSearch = signal<string>('');
+  ordersStatus = signal<string | null>(null);
+  ordersCurrentPage = signal<number>(0);
   coupons = signal<CouponResponse[]>([]);
+  analytics = signal<AnalyticsResponse | null>(null);
+
+  readonly statusOptions = [
+    { value: 'ALL', label: 'All Statuses' },
+    { value: 'PENDING', label: 'Pending Payment' },
+    { value: 'PAYMENT_SUCCESS', label: 'Order Confirmed' },
+    { value: 'SHIPPED', label: 'Shipped' },
+    { value: 'DELIVERED', label: 'Delivered' },
+    { value: 'CANCELLED', label: 'Cancelled' },
+  ];
+
+  statusLabel() {
+    return this.statusOptions.find(o => o.value === (this.ordersStatus() || 'ALL'))?.label ?? 'All Statuses';
+  }
+
+  closeStatusDropdownDelayed() {
+    setTimeout(() => this.showStatusDropdown.set(false), 150);
+  }
+
+  toggleOrder(id: string) {
+    if (this.expandedOrderId() === id) {
+      this.expandedOrderId.set(null);
+    } else {
+      this.expandedOrderId.set(id);
+    }
+  }
 
   addProductForm = this.fb.group({
     name: ['', Validators.required],
@@ -213,7 +820,7 @@ export class AdminDashboardComponent {
   thumbnailFile: File | null = null;
   thumbnailPreview: string | null = null;
   productImageFiles: Array<{ file: File; url: string }> = [];
-  productVideoFiles: Array<{ file: File }> = [];
+  productVideoFiles: Array<{ file: File; url: string }> = [];
   existingImageUrls: string[] = [];
   existingVideoUrls: string[] = [];
 
@@ -234,11 +841,35 @@ export class AdminDashboardComponent {
     getQty: [1],
     productId: [''],
     active: [true],
-    expiresAt: ['']
+    expiresAt: [''],
+    maxUses: [null as number | null],
+    maxUsesPerUser: [null as number | null]
   });
 
-  constructor() {
+  configForm = this.fb.group({
+    freeShippingThreshold: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0)]],
+    standardShippingCost: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0)]],
+    codFee: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0)]]
+  });
+
+  editConfigMode = signal(false);
+
+  enableConfigEdit() {
+    this.editConfigMode.set(true);
+    this.configForm.enable();
+  }
+
+  cancelConfigEdit() {
+    this.editConfigMode.set(false);
+    this.configForm.disable();
+    // reload to original state if needed
     this.loadDashboardData();
+  }
+
+  constructor() {
+    afterNextRender(() => {
+      this.loadDashboardData();
+    });
   }
 
   onThumbnailSelected(event: Event) {
@@ -251,6 +882,7 @@ export class AdminDashboardComponent {
   clearThumbnail() {
     this.thumbnailFile = null;
     this.thumbnailPreview = null;
+    this.addProductForm.patchValue({ imageUrl: '' });
   }
 
   onProductImagesSelected(event: Event) {
@@ -266,7 +898,7 @@ export class AdminDashboardComponent {
   onProductVideosSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const files = input.files ? Array.from(input.files) : [];
-    this.productVideoFiles = files.map((file) => ({ file }));
+    this.productVideoFiles = files.map((file) => ({ file, url: URL.createObjectURL(file) }));
   }
 
   removeProductVideo(index: number) {
@@ -306,14 +938,102 @@ export class AdminDashboardComponent {
 
   loadDashboardData() {
     this.api.get<ProductResponse[]>('/products').subscribe({ next: (products) => this.products.set(products) });
-    this.api.get<OrderResponse[]>('/admin/orders').subscribe({ next: (orders) => this.orders.set(orders) });
+    this.fetchOrders();
     this.api.get<CouponResponse[]>('/admin/coupons').subscribe({ next: (coupons) => this.coupons.set(coupons) });
+    this.api.get<StoreConfigResponse>('/config').subscribe({ next: (config) => this.configForm.patchValue(config) });
+    this.api.get<AnalyticsResponse>('/admin/analytics').subscribe({ next: (analytics) => this.analytics.set(analytics) });
   }
 
-  addProduct() { this.showAddProduct.set(true); }
+  onSearch(query: string) {
+    this.ordersSearch.set(query);
+    this.ordersCurrentPage.set(0);
+    this.fetchOrders();
+  }
 
-  deleteProduct(id: string) {
-    this.api.delete<void>(`/admin/products/${id}`).subscribe({ next: () => this.products.update(items => items.filter(p => p.id !== id)) });
+  onFilter(status: string | null) {
+    this.ordersStatus.set(status === 'ALL' ? null : status);
+    this.ordersCurrentPage.set(0);
+    this.fetchOrders();
+  }
+
+  onPageChange(page: number) {
+    this.ordersCurrentPage.set(page);
+    this.fetchOrders();
+  }
+
+  fetchOrders() {
+    const params: any = {
+      page: this.ordersCurrentPage(),
+      size: 10
+    };
+    if (this.ordersSearch()) params.search = this.ordersSearch();
+    if (this.ordersStatus()) params.status = this.ordersStatus();
+
+    this.api.get<PageResponse<OrderResponse>>('/admin/orders', params).subscribe({
+      next: (page) => this.ordersPage.set(page),
+      error: () => this.snackbar.showError('Failed to load orders')
+    });
+  }
+
+  addProduct() { 
+    this.editingProductId = null;
+    this.showAddProduct.set(true); 
+    this.addProductForm.reset({ name: '', description: '', price: 0, originalPrice: null, stock: 0, imageUrl: '' });
+    this.clearThumbnail();
+    this.productImageFiles = [];
+    this.productVideoFiles = [];
+    this.existingImageUrls = [];
+    this.existingVideoUrls = [];
+  }
+
+  cancelEdit() {
+    this.showAddProduct.set(false);
+    this.editingProductId = null;
+    this.addProductForm.reset();
+  }
+
+  confirmDelete(type: 'product' | 'coupon', id: string, name: string) {
+    this.deleteConfirm.set({ type, id, name });
+  }
+
+  executeDelete() {
+    const target = this.deleteConfirm();
+    if (!target) return;
+    
+    if (target.type === 'product') {
+      this.api.delete<void>(`/admin/products/${target.id}`).subscribe({ 
+        next: () => {
+          this.products.update(items => items.filter(p => p.id !== target.id));
+          this.deleteConfirm.set(null);
+          this.snackbar.showSuccess('Product deleted successfully');
+        },
+        error: () => this.snackbar.showError('Unable to delete product')
+      });
+    } else {
+      this.api.delete<void>(`/admin/coupons/${target.id}`).subscribe({
+        next: () => {
+          this.coupons.update(list => list.filter(c => c.id !== target.id));
+          this.deleteConfirm.set(null);
+          this.snackbar.showSuccess('Coupon deleted successfully');
+        },
+        error: () => this.snackbar.showError('Unable to delete coupon')
+      });
+    }
+  }
+
+  saveConfig() {
+    if (this.configForm.valid) {
+      this.api.put<StoreConfigResponse>('/admin/config', this.configForm.value).subscribe({
+        next: (config) => {
+          this.configForm.patchValue(config);
+          this.configForm.markAsPristine();
+          this.editConfigMode.set(false);
+          this.configForm.disable();
+          this.snackbar.showSuccess('Store configuration updated successfully');
+        },
+        error: () => this.snackbar.showError('Failed to update store configuration')
+      });
+    }
   }
 
   editProduct(product: ProductResponse) {
@@ -374,21 +1094,64 @@ export class AdminDashboardComponent {
     }
   }
 
-  createCoupon() {
+  openAddCoupon() {
+    this.editingCouponId.set(null);
+    this.couponForm.reset({ code: '', type: 'PERCENTAGE', discountValue: 0, minimumCartValue: 0, buyQty: 1, getQty: 1, productId: '', active: true, expiresAt: '', maxUses: null, maxUsesPerUser: null });
+    this.showCouponForm.set(true);
+  }
+
+  closeCouponForm() {
+    this.showCouponForm.set(false);
+    this.editingCouponId.set(null);
+    this.couponForm.reset({ code: '', type: 'PERCENTAGE', discountValue: 0, minimumCartValue: 0, buyQty: 1, getQty: 1, productId: '', active: true, expiresAt: '', maxUses: null, maxUsesPerUser: null });
+  }
+
+  editCoupon(c: CouponResponse) {
+    this.editingCouponId.set(c.id);
+    const expiresAtLocal = c.expiresAt ? new Date(c.expiresAt).toISOString().slice(0, 16) : '';
+    this.couponForm.patchValue({
+      code: c.code,
+      type: c.type,
+      discountValue: c.discountValue,
+      minimumCartValue: c.minimumCartValue,
+      buyQty: c.buyQty,
+      getQty: c.getQty,
+      productId: c.productId || '',
+      active: c.active,
+      expiresAt: expiresAtLocal,
+      maxUses: c.maxUses ?? null,
+      maxUsesPerUser: c.maxUsesPerUser ?? null
+    });
+    this.showCouponForm.set(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  saveCoupon() {
     if (this.couponForm.invalid) return;
-    this.api.post<CouponResponse>('/admin/coupons', this.couponForm.value).subscribe({
+
+    const payload: any = { ...this.couponForm.value };
+    payload.expiresAt = payload.expiresAt ? new Date(payload.expiresAt).toISOString() : null;
+    if (!payload.productId) payload.productId = null;
+
+    const id = this.editingCouponId();
+    const request$ = id
+      ? this.api.put<CouponResponse>(`/admin/coupons/${id}`, payload)
+      : this.api.post<CouponResponse>('/admin/coupons', payload);
+
+    request$.subscribe({
       next: (coupon) => {
-        this.coupons.update(list => [coupon, ...list]);
-        this.couponForm.patchValue({ code: '', discountValue: 0, minimumCartValue: 0, buyQty: 1, getQty: 1, productId: '' });
+        if (id) {
+          this.coupons.update(list => list.map(c => c.id === coupon.id ? coupon : c));
+          this.snackbar.showSuccess('Coupon updated successfully');
+        } else {
+          this.coupons.update(list => [coupon, ...list]);
+          this.snackbar.showSuccess('Coupon created successfully');
+        }
+        this.closeCouponForm();
       },
-      error: () => this.snackbar.showError('Unable to create coupon.')
+      error: () => this.snackbar.showError(id ? 'Unable to update coupon.' : 'Unable to create coupon.')
     });
   }
 
-  deleteCoupon(id: string) {
-    this.api.delete<void>(`/admin/coupons/${id}`).subscribe({
-      next: () => this.coupons.update(list => list.filter(c => c.id !== id)),
-      error: () => this.snackbar.showError('Unable to delete coupon.')
-    });
-  }
+  createCoupon() { this.saveCoupon(); }
 }

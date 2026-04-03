@@ -31,5 +31,8 @@ public class Coupon {
     private UUID productId;
     private boolean active = true;
     private Instant expiresAt;
+    private Integer maxUses;
+    private Integer maxUsesPerUser;
+    private Integer usageCount = 0;
     private Instant createdAt = Instant.now();
 }

@@ -4,6 +4,7 @@ import com.devinevibes.dto.order.OrderRequest;
 import com.devinevibes.dto.order.OrderResponse;
 import com.devinevibes.dto.order.TrackingResponse;
 import com.devinevibes.dto.payment.CreatePaymentOrderResponse;
+import com.devinevibes.dto.payment.VerifyPaymentRequest;
 import com.devinevibes.service.order.OrderService;
 import com.devinevibes.service.payment.PaymentService;
 import com.devinevibes.util.SecurityUtils;
@@ -21,14 +22,22 @@ public class OrderController {
     private final OrderService orderService;
     private final PaymentService paymentService;
 
+    @org.springframework.beans.factory.annotation.Value("${razorpay.key-id:}")
+    private String razorpayKeyId;
+
     public OrderController(OrderService orderService, PaymentService paymentService) {
         this.orderService = orderService;
         this.paymentService = paymentService;
     }
 
+    @GetMapping("/razorpay-key")
+    public ResponseEntity<java.util.Map<String, String>> getRazorpayKey() {
+        return ResponseEntity.ok(java.util.Map.of("key", razorpayKeyId));
+    }
+
     @PostMapping
-    public ResponseEntity<OrderResponse> create(@Valid @RequestBody OrderRequest ignored) {
-        return ResponseEntity.ok(orderService.createOrder(SecurityUtils.currentPrincipalEmail()));
+    public ResponseEntity<OrderResponse> create(@Valid @RequestBody OrderRequest request) {
+        return ResponseEntity.ok(orderService.createOrder(SecurityUtils.currentPrincipalEmail(), request));
     }
 
     @PostMapping("/{orderId}/payment-order")
@@ -41,8 +50,25 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getMyOrders(SecurityUtils.currentPrincipalEmail()));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<OrderResponse> getById(@PathVariable UUID id) {
+        return ResponseEntity.ok(orderService.getMyOrderById(SecurityUtils.currentPrincipalEmail(), id));
+    }
+
     @GetMapping("/{id}/tracking")
     public ResponseEntity<TrackingResponse> tracking(@PathVariable UUID id) {
         return ResponseEntity.ok(orderService.getTracking(SecurityUtils.currentPrincipalEmail(), id));
+    }
+
+    @PostMapping("/{id}/verify")
+    public ResponseEntity<Void> verifyPayment(@PathVariable UUID id, @Valid @RequestBody VerifyPaymentRequest request) {
+        paymentService.verifyRazorpayPayment(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<java.util.Map<String, String>> cancel(@PathVariable UUID id) {
+        orderService.cancelOrder(SecurityUtils.currentPrincipalEmail(), id);
+        return ResponseEntity.ok(java.util.Map.of("message", "Order cancelled and stock restored"));
     }
 }

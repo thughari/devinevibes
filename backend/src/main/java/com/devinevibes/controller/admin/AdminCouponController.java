@@ -26,6 +26,11 @@ public class AdminCouponController {
         return ResponseEntity.ok(couponService.create(request));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<CouponResponse> update(@PathVariable UUID id, @RequestBody CreateCouponRequest request) {
+        return ResponseEntity.ok(couponService.update(id, request));
+    }
+
     @GetMapping
     public ResponseEntity<List<CouponResponse>> list() {
         return ResponseEntity.ok(couponService.list());

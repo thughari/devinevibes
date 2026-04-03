@@ -1,7 +1,8 @@
 package com.devinevibes.service.order;
 
-import com.devinevibes.client.ShiprocketClient;
+import com.devinevibes.dto.order.OrderRequest;
 import com.devinevibes.dto.order.OrderResponse;
+import com.devinevibes.client.ShiprocketClient;
 import com.devinevibes.dto.order.TrackingResponse;
 import com.devinevibes.entity.order.Order;
 import com.devinevibes.entity.order.OrderItem;
@@ -10,13 +11,24 @@ import com.devinevibes.entity.order.PaymentStatus;
 import com.devinevibes.exception.OrderNotFoundException;
 import com.devinevibes.repository.order.OrderRepository;
 import com.devinevibes.service.cart.CartService;
+import com.devinevibes.service.config.StoreConfigService;
+import com.devinevibes.service.coupon.CouponService;
+import com.devinevibes.service.notification.EmailService;
 import com.devinevibes.service.product.ProductService;
 import com.devinevibes.service.user.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.devinevibes.dto.common.PageResponse;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,24 +41,53 @@ public class OrderService {
     private final UserService userService;
     private final ShiprocketClient shiprocketClient;
     private final ProductService productService;
+    private final StoreConfigService storeConfigService;
+    private final EmailService emailService;
+    private final CouponService couponService;
 
-    public OrderService(OrderRepository orderRepository, CartService cartService, UserService userService, ShiprocketClient shiprocketClient, ProductService productService) {
+    public OrderService(OrderRepository orderRepository, CartService cartService, UserService userService, ShiprocketClient shiprocketClient, ProductService productService, StoreConfigService storeConfigService, com.devinevibes.service.notification.EmailService emailService, com.devinevibes.service.coupon.CouponService couponService) {
         this.orderRepository = orderRepository;
         this.cartService = cartService;
         this.userService = userService;
         this.shiprocketClient = shiprocketClient;
         this.productService = productService;
+        this.storeConfigService = storeConfigService;
+        this.emailService = emailService;
+        this.couponService = couponService;
     }
 
     @Transactional
-    public OrderResponse createOrder(String email) {
+    public OrderResponse createOrder(String email, OrderRequest request) {
+        // Throttling: Prevent multiple PENDING orders from the same user in 60s
+        Instant oneMinuteAgo = Instant.now().minus(60, ChronoUnit.SECONDS);
+        List<Order> recentOrders = orderRepository.findByOrderStatusAndCreatedAtBefore(OrderStatus.PENDING, Instant.now());
+        boolean hasConflict = recentOrders.stream()
+                .anyMatch(o -> o.getUser().getEmail().equalsIgnoreCase(email) && o.getCreatedAt().isAfter(oneMinuteAgo));
+
+        if (hasConflict) {
+            log.warn("Order creation throttled for user {}: recent attempt within 60s", email);
+            throw new com.devinevibes.exception.BadRequestException("A recent checkout attempt is already in progress. Please wait 60 seconds.");
+        }
+
         var cartItems = cartService.fetchItems(email);
         if (cartItems.isEmpty()) throw new IllegalArgumentException("Cart is empty");
 
         Order order = new Order();
         order.setUser(userService.getByEmail(email));
+        
+        // Save shipping context
+        order.setShippingEmail(request.email());
+        order.setShippingPhone(request.phone());
+        order.setShippingFirstName(request.firstName());
+        order.setShippingLastName(request.lastName());
+        order.setShippingAddress(request.address());
+        order.setShippingCity(request.city());
+        order.setShippingState(request.state());
+        order.setShippingPostalCode(request.postalCode());
+        order.setPaymentMethod(request.paymentMethod() != null ? request.paymentMethod() : "Prepaid");
 
-        BigDecimal total = BigDecimal.ZERO;
+        int totalQty = 0;
+        BigDecimal subtotal = BigDecimal.ZERO;
         for (var cart : cartItems) {
             if (cart.getQuantity() > cart.getProduct().getStock()) {
                 throw new com.devinevibes.exception.BadRequestException("Not enough stock for product " + cart.getProduct().getName());
@@ -61,17 +102,133 @@ public class OrderService {
             item.setQuantity(cart.getQuantity());
             item.setUnitPrice(cart.getProduct().getPrice());
             order.getItems().add(item);
-            total = total.add(cart.getProduct().getPrice().multiply(BigDecimal.valueOf(cart.getQuantity())));
+            
+            totalQty += cart.getQuantity();
+            subtotal = subtotal.add(cart.getProduct().getPrice().multiply(BigDecimal.valueOf(cart.getQuantity())));
         }
 
+        var config = storeConfigService.getConfig();
+        BigDecimal shippingCost = subtotal.compareTo(config.freeShippingThreshold()) > 0 ? BigDecimal.ZERO : config.standardShippingCost();
+        
+        BigDecimal discount = BigDecimal.ZERO;
+        if (request.couponCode() != null && !request.couponCode().isBlank()) {
+            try {
+                com.devinevibes.dto.coupon.ApplyCouponResponse couponRes = couponService.apply(email, new com.devinevibes.dto.coupon.ApplyCouponRequest(request.couponCode(), subtotal, totalQty));
+                discount = couponRes.discountAmount();
+                order.setAppliedCoupon(request.couponCode());
+                order.setCouponDiscount(discount);
+                
+                // Logic to separate Free items visually in order details
+                if (couponRes.freeQuantity() != null && couponRes.freeQuantity() > 0 && couponRes.targetProductId() != null) {
+                    UUID targetId = UUID.fromString(couponRes.targetProductId());
+                    OrderItem paidItem = order.getItems().stream()
+                        .filter(i -> i.getProduct().getId().equals(targetId))
+                        .findFirst().orElse(null);
+                        
+                    if (paidItem != null) {
+                        int originalQty = paidItem.getQuantity();
+                        int freeQty = Math.min(originalQty, couponRes.freeQuantity());
+                        
+                        // Shrink the paid item
+                        paidItem.setQuantity(originalQty - freeQty);
+                        
+                        // Add the FREE item row
+                        OrderItem freeItem = new OrderItem();
+                        freeItem.setOrder(order);
+                        freeItem.setProduct(paidItem.getProduct());
+                        freeItem.setQuantity(freeQty);
+                        freeItem.setUnitPrice(BigDecimal.ZERO);
+                        order.getItems().add(freeItem);
+                        
+                        // Clean up if the entire line was free (rare for BXGX but safe)
+                        if (paidItem.getQuantity() == 0) {
+                            order.getItems().remove(paidItem);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to apply coupon securely during checkout: {}", e.getMessage());
+                throw new com.devinevibes.exception.BadRequestException("Failed to apply coupon: " + e.getMessage());
+            }
+        }
+        
+        BigDecimal total = subtotal.add(shippingCost).subtract(discount);
+        
+        // Add COD Fee if applicable
+        BigDecimal codFee = BigDecimal.ZERO;
+        if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
+            codFee = config.codFee() != null ? config.codFee() : BigDecimal.ZERO;
+            total = total.add(codFee);
+        }
+        
+        if (total.compareTo(BigDecimal.ZERO) < 0) total = BigDecimal.ZERO;
         order.setTotalAmount(total);
+        
+        if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
+            order.setPaymentStatus(PaymentStatus.PENDING);
+            order.setOrderStatus(OrderStatus.PAYMENT_SUCCESS);
+        }
+        
+        // SAVE FIRST to generate UUID
         Order saved = orderRepository.save(order);
-        cartService.clear(email);
+
+        if ("COD".equalsIgnoreCase(saved.getPaymentMethod())) {
+            var shipment = shiprocketClient.createShipment(saved);
+            saved.setShipmentId(shipment.shipmentId());
+            saved.setTrackingId(shipment.trackingId());
+            saved = orderRepository.save(saved);
+            
+            emailService.sendOrderConfirmation(saved);
+        }
+        
+        if (saved.getAppliedCoupon() != null) {
+            couponService.incrementUsage(saved.getAppliedCoupon());
+        }
+        
+        // ONLY clear cart immediately for COD. 
+        // Prepaid orders keep items in cart until payment is verified (in markPaymentSuccess).
+        if ("COD".equalsIgnoreCase(saved.getPaymentMethod())) {
+            cartService.clear(email);
+        }
+        
         return map(saved);
     }
 
     public List<OrderResponse> getMyOrders(String email) {
-        return orderRepository.findByUser(userService.getByEmail(email)).stream().map(this::map).toList();
+        return orderRepository.findByUser(userService.getByEmail(email)).stream()
+                .sorted(java.util.Comparator.comparing(Order::getCreatedAt).reversed())
+                .map(this::map).toList();
+    }
+
+    public PageResponse<OrderResponse> getAllOrders(Pageable pageable, String search, OrderStatus status) {
+        Specification<Order> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            if (status != null) {
+                predicates.add(cb.equal(root.get("orderStatus"), status));
+            }
+            
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("shippingFirstName")), pattern),
+                    cb.like(cb.lower(root.get("shippingLastName")), pattern),
+                    cb.like(cb.lower(root.get("shippingEmail")), pattern),
+                    cb.like(cb.lower(root.get("shippingPhone")), pattern),
+                    cb.like(cb.lower(root.get("user").get("name")), pattern),
+                    cb.like(cb.lower(root.get("user").get("email")), pattern)
+                ));
+            }
+            
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        var page = orderRepository.findAll(spec, pageable);
+        return PageResponse.from(page, page.getContent().stream().map(this::map).toList());
+    }
+
+    public OrderResponse getMyOrderById(String email, UUID orderId) {
+        return map(findOwnedOrder(email, orderId));
     }
 
     public TrackingResponse getTracking(String email, UUID orderId) {
@@ -87,10 +244,40 @@ public class OrderService {
         order.setOrderStatus(OrderStatus.PAYMENT_SUCCESS);
         order.setRazorpayPaymentId(razorpayPaymentId);
 
-        var shipment = shiprocketClient.createShipment(order.getId().toString());
+        var shipment = shiprocketClient.createShipment(order);
         order.setShipmentId(shipment.shipmentId());
         order.setTrackingId(shipment.trackingId());
         log.info("Shipment created for order {}", order.getId());
+
+        // Send confirmation email
+        emailService.sendOrderConfirmation(order);
+        
+        // CLEAR CART ONLY NOW for prepaid success
+        if (order.getUser() != null) {
+            cartService.clear(order.getUser().getEmail());
+        }
+    }
+
+    @Transactional
+    public void cancelOrder(String email, UUID orderId) {
+        Order order = findOwnedOrder(email, orderId);
+        // Only allow cancellation of PENDING orders
+        if (order.getOrderStatus() != OrderStatus.PENDING) {
+            log.info("Ignoring cancel for order {} with status {}", orderId, order.getOrderStatus());
+            return;
+        }
+        
+        // Restore stock
+        for (OrderItem item : order.getItems()) {
+            productService.releaseStock(item.getProduct(), item.getQuantity());
+            log.info("Stock restored: {} x {} for order {}", item.getQuantity(), item.getProduct().getName(), orderId);
+        }
+        
+        order.setOrderStatus(OrderStatus.CANCELLED);
+        order.setPaymentStatus(PaymentStatus.FAILED);
+        order.setCancellationReason("User cancelled payment");
+        orderRepository.save(order);
+        log.info("Order {} cancelled and stock restored by user {}", orderId, email);
     }
 
     @Transactional
@@ -99,6 +286,9 @@ public class OrderService {
                 .filter(o -> trackingId.equals(o.getTrackingId()))
                 .findFirst().orElseThrow(() -> new OrderNotFoundException("Tracking not found"));
         order.setOrderStatus(status);
+
+        // Send tracking updates only for major events (SHIPPED, DELIVERED)
+        emailService.sendOrderUpdate(order, status);
     }
 
     public Order findOwnedOrder(String email, UUID orderId) {
@@ -108,7 +298,48 @@ public class OrderService {
     }
 
     private OrderResponse map(Order order) {
-        return new OrderResponse(order.getId(), order.getTotalAmount(), order.getOrderStatus(),
-                order.getPaymentStatus(), order.getRazorpayOrderId(), order.getTrackingId());
+        String cName = order.getUser() != null ? order.getUser().getName() : null;
+        String cEmail = order.getUser() != null ? order.getUser().getEmail() : null;
+        
+        var mappedItems = order.getItems().stream().map(item -> new com.devinevibes.dto.order.OrderItemResponse(
+            item.getProduct().getId(),
+            item.getProduct().getName(),
+            item.getUnitPrice(),
+            item.getQuantity(),
+            item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())),
+            item.getProduct().getImageUrl()
+        )).toList();
+
+        return new OrderResponse(
+                order.getId(), order.getTotalAmount(), order.getOrderStatus(),
+                order.getPaymentStatus(), order.getRazorpayOrderId(), order.getTrackingId(),
+                order.getPaymentMethod(), cName, cEmail, order.getCreatedAt(), mappedItems,
+                order.getShippingAddress(), order.getShippingCity(), order.getShippingState(),
+                order.getShippingPostalCode(), order.getShippingPhone(), 
+                order.getShippingFirstName(), order.getShippingLastName()
+        );
+    }
+
+    @Scheduled(fixedRate = 300000)
+    @Transactional
+    public void autoCancelAbandonedOrders() {
+        Instant cutoff = Instant.now().minus(15, ChronoUnit.MINUTES);
+        List<Order> abandoned = orderRepository.findByOrderStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff);
+        if (abandoned.isEmpty()) return;
+        log.info("Watchdog: Found {} abandoned orders", abandoned.size());
+        for (Order order : abandoned) {
+            try {
+                for (OrderItem item : order.getItems()) {
+                    productService.releaseStock(item.getProduct(), item.getQuantity());
+                }
+                order.setOrderStatus(OrderStatus.CANCELLED);
+                order.setPaymentStatus(PaymentStatus.FAILED);
+                order.setCancellationReason("System: Abandoned payment");
+                orderRepository.save(order);
+                log.info("Auto-cancelled abandoned order {}", order.getId());
+            } catch (Exception e) {
+                log.error("Failed to auto-cancel order {}: {}", order.getId(), e.getMessage());
+            }
+        }
     }
 }

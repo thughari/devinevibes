@@ -22,7 +22,7 @@ import { CartService } from '../../../core/services/cart.service';
           </div>
 
           <!-- Desktop Menu -->
-          <div class="hidden md:flex items-center space-x-8">
+          <div class="hidden lg:flex items-center space-x-5 xl:space-x-8">
             <a routerLink="/" routerLinkActive="text-brand-gold font-semibold" [routerLinkActiveOptions]="{exact: true}" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">Home</a>
             <a routerLink="/products" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">Store</a>
             <a routerLink="/about" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">About Us</a>
@@ -35,7 +35,7 @@ import { CartService } from '../../../core/services/cart.service';
           <!-- Actions -->
           <div class="flex items-center space-x-4 sm:space-x-8">
             <a routerLink="/cart" class="flex items-center text-brand-dark hover:text-brand-gold transition-colors group">
-              <span class="font-medium mr-2 text-xs sm:text-sm tracking-wide">{{ cart.count() }} items</span>
+              <span class="font-medium mr-2 text-xs sm:text-sm tracking-wide hidden sm:block">{{ cart.count() }} items</span>
               <div class="relative">
                 <mat-icon class="text-brand-green group-hover:text-brand-gold transition-colors duration-300">local_mall</mat-icon>
                 <span class="absolute -top-1.5 -right-2 bg-brand-gold text-white text-[9px] font-bold h-[18px] w-[18px] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">{{ cart.count() }}</span>
@@ -43,13 +43,13 @@ import { CartService } from '../../../core/services/cart.service';
             </a>
             
             @if (auth.isAuthenticated()) {
-              <div class="relative group hidden md:block">
+              <div class="relative group hidden lg:block">
                 <button class="flex items-center text-brand-dark hover:text-brand-gold transition-colors">
                   <mat-icon class="text-[28px]">account_circle</mat-icon>
                 </button>
                 
                 <!-- Dropdown -->
-                <div class="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-md border border-gray-100 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-right translate-y-2 group-hover:translate-y-0">
+                <div class="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-md border border-gray-100 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-right translate-y-2 group-hover:translate-y-0 text-brand-dark">
                   <div class="py-2">
                     <div class="px-5 py-3 border-b border-gray-50/50 bg-gray-50/30">
                       <p class="text-[11px] uppercase tracking-widest text-brand-text mb-1">Signed in as</p>
@@ -64,13 +64,13 @@ import { CartService } from '../../../core/services/cart.service';
                 </div>
               </div>
             } @else {
-              <a routerLink="/auth/login" class="hidden md:flex items-center text-brand-dark hover:text-brand-gold transition-colors">
+              <a routerLink="/auth/login" class="hidden lg:flex items-center text-brand-dark hover:text-brand-gold transition-colors">
                 <mat-icon class="text-[28px]">account_circle</mat-icon>
               </a>
             }
             
             <!-- Mobile menu button -->
-            <button class="md:hidden text-brand-dark hover:text-brand-gold transition-colors" (click)="mobileMenuOpen.set(!mobileMenuOpen())">
+            <button class="lg:hidden text-brand-dark hover:text-brand-gold transition-colors" (click)="mobileMenuOpen.set(!mobileMenuOpen())">
               <mat-icon class="text-[28px]">{{ mobileMenuOpen() ? 'close' : 'menu_open' }}</mat-icon>
             </button>
           </div>
@@ -79,20 +79,24 @@ import { CartService } from '../../../core/services/cart.service';
 
       <!-- Mobile Menu -->
       @if (mobileMenuOpen()) {
-        <div class="md:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-xl absolute w-full left-0">
+        <div class="lg:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-xl absolute w-full left-0">
           <div class="px-6 pt-5 pb-8 space-y-2">
-            <a routerLink="/" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Home</a>
-            <a routerLink="/products" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Store</a>
-            <a routerLink="/about" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">About Us</a>
-            <a routerLink="/contact" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Contact Us</a>
+            <a routerLink="/" (click)="mobileMenuOpen.set(false)" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Home</a>
+            <a routerLink="/products" (click)="mobileMenuOpen.set(false)" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Store</a>
+            <a routerLink="/about" (click)="mobileMenuOpen.set(false)" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">About Us</a>
+            <a routerLink="/contact" (click)="mobileMenuOpen.set(false)" class="block px-4 py-3 text-base uppercase tracking-widest font-medium text-brand-text hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">Contact Us</a>
             @if (auth.isAuthenticated()) {
               <div class="h-px w-full bg-gray-100 my-4"></div>
               <p class="px-4 py-2 text-xs uppercase tracking-widest text-brand-text">{{ auth.currentUser()?.name }}</p>
-              <a routerLink="/user/profile" class="block px-4 py-3 text-base font-medium text-brand-dark hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">My Account</a>
-              <button (click)="auth.logout()" class="block w-full text-left px-4 py-3 text-base font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all">Logout</button>
+              @if (auth.currentUser()?.role === 'ADMIN') {
+                <a routerLink="/admin" (click)="mobileMenuOpen.set(false)" class="block px-4 py-3 text-base font-medium text-brand-green bg-brand-green/5 hover:text-brand-green-dark hover:bg-brand-green/10 rounded-xl transition-all border border-brand-green/10 shadow-sm mb-2"><mat-icon class="inline align-bottom mr-2 text-[20px]">admin_panel_settings</mat-icon> Admin Dashboard</a>
+              }
+              <a routerLink="/order/history" (click)="mobileMenuOpen.set(false)" class="block px-4 py-3 text-base font-medium text-brand-dark hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all"><mat-icon class="inline align-bottom mr-2 text-[20px]">receipt_long</mat-icon> My Orders</a>
+              <a routerLink="/user/profile" (click)="mobileMenuOpen.set(false)" class="block px-4 py-3 text-base font-medium text-brand-dark hover:text-brand-gold hover:bg-brand-gray rounded-xl transition-all">My Account</a>
+              <button (click)="auth.logout(); mobileMenuOpen.set(false)" class="block w-full text-left px-4 py-3 text-base font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all">Logout</button>
             } @else {
               <div class="h-px w-full bg-gray-100 my-4"></div>
-              <a routerLink="/auth/login" class="block px-4 py-3 text-center text-sm uppercase tracking-widest font-bold text-white bg-brand-green hover:bg-brand-green-dark rounded-xl transition-all shadow-md">Sign In</a>
+              <a routerLink="/auth/login" (click)="mobileMenuOpen.set(false)" class="block px-4 py-3 text-center text-sm uppercase tracking-widest font-bold text-white bg-brand-green hover:bg-brand-green-dark rounded-xl transition-all shadow-md">Sign In</a>
             }
           </div>
         </div>

@@ -44,5 +44,20 @@ public class Order {
     private String shipmentId;
     private String trackingId;
 
+    private String paymentMethod;
+    private String appliedCoupon;
+    private BigDecimal couponDiscount = BigDecimal.ZERO;
+
+    // Shipping Address Snapshot
+    private String shippingFirstName;
+    private String shippingLastName;
+    private String shippingEmail;
+    private String shippingPhone;
+    private String shippingAddress;
+    private String shippingCity;
+    private String shippingState;
+    private String shippingPostalCode;
+
+    private String cancellationReason;
     private Instant createdAt = Instant.now();
 }

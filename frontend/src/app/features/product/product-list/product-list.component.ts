@@ -24,18 +24,25 @@ import { CartService } from '../../../core/services/cart.service';
           <p class="text-brand-text">Discover our sacred and authentic spiritual items.</p>
         </div>
         
-        <!-- Filters (Mock) -->
-        <div class="mt-6 md:mt-0 flex gap-4">
-          <select
-            [value]="sortBy()"
-            (change)="onSortChange($event)"
-            class="bg-white border border-gray-300 text-brand-text text-sm rounded-sm focus:ring-brand-green focus:border-brand-green block w-full p-2.5"
+        <!-- Filters -->
+        <div class="mt-6 md:mt-0 flex gap-4 relative">
+          <button 
+            (click)="isSortDropdownOpen.set(!isSortDropdownOpen())"
+            (blur)="closeDropdownDelay()"
+            class="bg-white border border-gray-200 text-brand-dark font-sans text-sm rounded-full px-5 py-2.5 flex items-center justify-between min-w-[220px] hover:border-brand-gold transition-colors focus:outline-none focus:ring-1 focus:ring-brand-gold shadow-sm"
           >
-            <option value="featured">Sort by: Featured</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-            <option value="newest">Newest Arrivals</option>
-          </select>
+            <span class="tracking-wide">Sort by: <span class="font-medium ml-1">{{ getSortLabel() }}</span></span>
+            <mat-icon class="text-gray-400 text-[20px] transition-transform duration-300 {{ isSortDropdownOpen() ? 'rotate-180' : '' }}">expand_more</mat-icon>
+          </button>
+
+          @if (isSortDropdownOpen()) {
+            <div class="absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white border border-gray-100 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] overflow-hidden z-20">
+              <button (click)="selectSort('featured')" class="w-full text-left px-5 py-3 text-sm transition-colors text-brand-dark hover:bg-[#FAFAFA] hover:text-brand-gold {{ sortBy() === 'featured' ? 'bg-[#FAFAFA] text-brand-gold font-medium' : '' }}">Featured</button>
+              <button (click)="selectSort('price_asc')" class="w-full text-left px-5 py-3 text-sm transition-colors text-brand-dark hover:bg-[#FAFAFA] hover:text-brand-gold {{ sortBy() === 'price_asc' ? 'bg-[#FAFAFA] text-brand-gold font-medium' : '' }}">Price: Low to High</button>
+              <button (click)="selectSort('price_desc')" class="w-full text-left px-5 py-3 text-sm transition-colors text-brand-dark hover:bg-[#FAFAFA] hover:text-brand-gold {{ sortBy() === 'price_desc' ? 'bg-[#FAFAFA] text-brand-gold font-medium' : '' }}">Price: High to Low</button>
+              <button (click)="selectSort('newest')" class="w-full text-left px-5 py-3 text-sm transition-colors text-brand-dark hover:bg-[#FAFAFA] hover:text-brand-gold {{ sortBy() === 'newest' ? 'bg-[#FAFAFA] text-brand-gold font-medium' : '' }}">Newest Arrivals</button>
+            </div>
+          }
         </div>
       </div>
 
@@ -124,10 +131,26 @@ export class ProductListComponent implements OnInit {
     });
   }
 
-  onSortChange(event: Event) {
-    const value = (event.target as HTMLSelectElement).value as 'featured' | 'price_asc' | 'price_desc' | 'newest';
+  isSortDropdownOpen = signal(false);
+
+  getSortLabel(): string {
+    const map = {
+      'featured': 'Featured',
+      'price_asc': 'Low to High',
+      'price_desc': 'High to Low',
+      'newest': 'Newest Arrivals'
+    };
+    return map[this.sortBy()];
+  }
+
+  selectSort(value: 'featured' | 'price_asc' | 'price_desc' | 'newest') {
     this.sortBy.set(value);
     this.sortProducts(value);
+    this.isSortDropdownOpen.set(false);
+  }
+
+  closeDropdownDelay() {
+    setTimeout(() => this.isSortDropdownOpen.set(false), 200);
   }
 
   onAddToCart(product: ProductResponse) {
