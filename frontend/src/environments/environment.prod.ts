@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.devinevibes.in/api',
+  apiUrl: 'https://devinevibes-backend-83197747764.asia-south1.run.app/api',
   googleClientId: ''
 };
