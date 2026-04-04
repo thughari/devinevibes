@@ -1,10 +1,11 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiService } from './api.service';
 import { AuthResponse, GoogleLoginRequest, OtpRequest, OtpVerifyRequest } from '../../shared/models/auth.model';
-import { UserProfileResponse } from '../../shared/models/user.model';
-import { tap, catchError } from 'rxjs/operators';
+import { UpdateUserProfileRequest, UserProfileResponse } from '../../shared/models/user.model';
+import { tap } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +16,7 @@ export class AuthService {
 
   private readonly TOKEN_KEY = 'dv_access_token';
   private readonly REFRESH_TOKEN_KEY = 'dv_refresh_token';
+  private readonly PROFILE_KEY = 'dv_user_profile';
 
   currentUser = signal<UserProfileResponse | null>(null);
   isAuthenticated = signal<boolean>(false);
@@ -26,10 +28,32 @@ export class AuthService {
   private checkAuthStatus() {
     if (typeof window !== 'undefined' && window.localStorage) {
       const token = this.getAccessToken();
+      const cachedProfile = localStorage.getItem(this.PROFILE_KEY);
+      
+      if (cachedProfile) {
+        try {
+          this.currentUser.set(JSON.parse(cachedProfile));
+        } catch (e) {
+          // Ignore invalid cache
+        }
+      }
+
       if (token) {
         this.isAuthenticated.set(true);
         this.fetchProfile().subscribe({
-          error: () => this.logout()
+          error: (err: HttpErrorResponse) => {
+            if (err.status !== 401) {
+              return;
+            }
+            this.refreshToken().subscribe({
+              next: () => {
+                this.fetchProfile().subscribe({
+                  error: () => this.logout()
+                });
+              },
+              error: () => this.logout()
+            });
+          }
         });
       }
     }
@@ -37,22 +61,33 @@ export class AuthService {
 
   getAccessToken(): string | null {
     if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem(this.TOKEN_KEY);
+      const rawToken = localStorage.getItem(this.TOKEN_KEY) || localStorage.getItem('token');
+      if (!rawToken || rawToken === 'null' || rawToken === 'undefined') {
+        return null;
+      }
+      return rawToken;
     }
     return null;
   }
 
   getRefreshToken(): string | null {
     if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+      const refreshToken = localStorage.getItem(this.REFRESH_TOKEN_KEY);
+      if (!refreshToken || refreshToken === 'null' || refreshToken === 'undefined') {
+        return null;
+      }
+      return refreshToken;
     }
     return null;
   }
 
   setTokens(auth: AuthResponse) {
     if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem(this.TOKEN_KEY, auth.accessToken);
-      localStorage.setItem(this.REFRESH_TOKEN_KEY, auth.refreshToken);
+      const accessToken = auth.accessToken || '';
+      const refreshToken = auth.refreshToken || '';
+      localStorage.setItem(this.TOKEN_KEY, accessToken);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
     }
     this.isAuthenticated.set(true);
   }
@@ -61,6 +96,8 @@ export class AuthService {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem(this.TOKEN_KEY);
       localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+      localStorage.removeItem('token');
+      localStorage.removeItem(this.PROFILE_KEY);
     }
     this.isAuthenticated.set(false);
     this.currentUser.set(null);
@@ -75,22 +112,8 @@ export class AuthService {
     );
   }
 
-  register(email: string, password: string, name: string): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/auth/register', { email, password, name }).pipe(
-      tap(res => {
-        this.setTokens(res);
-        this.fetchProfile().subscribe();
-      })
-    );
-  }
-
-  login(email: string, password: string): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/auth/login', { email, password }).pipe(
-      tap(res => {
-        this.setTokens(res);
-        this.fetchProfile().subscribe();
-      })
-    );
+  register(data: OtpRequest): Observable<unknown> {
+    return this.requestOtp(data);
   }
 
   requestOtp(data: OtpRequest): Observable<unknown> {
@@ -98,7 +121,7 @@ export class AuthService {
   }
 
   verifyOtp(data: OtpVerifyRequest): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/auth/otp/verify', data).pipe(
+    return this.api.post<AuthResponse>('/auth/verify-otp', data).pipe(
       tap(res => {
         this.setTokens(res);
         this.fetchProfile().subscribe();
@@ -109,20 +132,32 @@ export class AuthService {
   refreshToken(): Observable<AuthResponse> {
     const refreshToken = this.getRefreshToken();
     if (!refreshToken) {
-      return throwError(() => new Error('No refresh token'));
+      return throwError(() => new Error('No refresh token available'));
     }
     return this.api.post<AuthResponse>('/auth/refresh', { refreshToken }).pipe(
-      tap(res => this.setTokens(res)),
-      catchError(err => {
-        this.logout();
-        return throwError(() => err);
-      })
+      tap(res => this.setTokens(res))
     );
   }
 
   fetchProfile(): Observable<UserProfileResponse> {
-    return this.api.get<UserProfileResponse>('/users/me').pipe(
-      tap(profile => this.currentUser.set(profile))
+    return this.api.get<UserProfileResponse>('/user/me').pipe(
+      tap(profile => {
+        this.currentUser.set(profile);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(this.PROFILE_KEY, JSON.stringify(profile));
+        }
+      })
+    );
+  }
+
+  updateProfile(data: UpdateUserProfileRequest): Observable<UserProfileResponse> {
+    return this.api.put<UserProfileResponse>('/user/me', data).pipe(
+      tap(profile => {
+        this.currentUser.set(profile);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(this.PROFILE_KEY, JSON.stringify(profile));
+        }
+      })
     );
   }
 

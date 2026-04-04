@@ -4,6 +4,7 @@ import com.devinevibes.dto.cart.AddToCartRequest;
 import com.devinevibes.dto.cart.CartItemResponse;
 import com.devinevibes.entity.cart.CartItem;
 import com.devinevibes.entity.user.User;
+import com.devinevibes.exception.BadRequestException;
 import com.devinevibes.repository.cart.CartRepository;
 import com.devinevibes.service.product.ProductService;
 import com.devinevibes.service.user.UserService;
@@ -29,9 +30,15 @@ public class CartService {
         User user = userService.getByEmail(email);
         var product = productService.fetchEntity(request.productId());
         CartItem item = cartRepository.findByUserAndProduct(user, product).orElseGet(CartItem::new);
+
+        int desiredQuantity = (item.getQuantity() == null ? 0 : item.getQuantity()) + request.quantity();
+        if (desiredQuantity > product.getStock()) {
+            throw new BadRequestException("Requested quantity exceeds available stock");
+        }
+
         item.setUser(user);
         item.setProduct(product);
-        item.setQuantity((item.getQuantity() == null ? 0 : item.getQuantity()) + request.quantity());
+        item.setQuantity(desiredQuantity);
         cartRepository.save(item);
     }
 
@@ -40,8 +47,29 @@ public class CartService {
         return cartRepository.findByUser(user).stream().map(item -> {
             BigDecimal total = item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             return new CartItemResponse(item.getId(), item.getProduct().getId(), item.getProduct().getName(),
-                    item.getQuantity(), item.getProduct().getPrice(), total);
+                    item.getQuantity(), item.getProduct().getPrice(), total, item.getProduct().getImageUrl(), item.getProduct().getStock());
         }).toList();
+    }
+
+    public void updateQuantity(String email, java.util.UUID cartItemId, Integer quantity) {
+        if (quantity < 1) {
+            throw new BadRequestException("Quantity must be at least 1");
+        }
+        User user = userService.getByEmail(email);
+        CartItem item = cartRepository.findByIdAndUser(cartItemId, user)
+                .orElseThrow(() -> new IllegalArgumentException("Cart item not found"));
+        if (quantity > item.getProduct().getStock()) {
+            throw new BadRequestException("Requested quantity exceeds available stock");
+        }
+        item.setQuantity(quantity);
+        cartRepository.save(item);
+    }
+
+    public void remove(String email, java.util.UUID cartItemId) {
+        User user = userService.getByEmail(email);
+        CartItem item = cartRepository.findByIdAndUser(cartItemId, user)
+                .orElseThrow(() -> new IllegalArgumentException("Cart item not found"));
+        cartRepository.delete(item);
     }
 
     public List<CartItem> fetchItems(String email) {

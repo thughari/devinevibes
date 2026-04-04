@@ -1,4 +1,4 @@
-import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpErrorResponse } from '@angular/common/http';
+import { HttpInterceptorFn, HttpRequest, HttpHandlerFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { catchError, switchMap, throwError } from 'rxjs';
@@ -17,17 +17,22 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
   }
 
   return next(authReq).pipe(
-    catchError((error: HttpErrorResponse) => {
+    catchError((error) => {
       if (error.status === 401 && !req.url.includes('/auth/refresh')) {
-        // Try to refresh token
+        const refreshToken = authService.getRefreshToken();
+        if (!refreshToken) {
+          // no refresh token; do not immediately force logout, just propagate error.
+          return throwError(() => error);
+        }
+
         return authService.refreshToken().pipe(
-          switchMap((authRes) => {
-            const newReq = req.clone({
+          switchMap((res) => {
+            const retryReq = req.clone({
               setHeaders: {
-                Authorization: `Bearer ${authRes.accessToken}`
+                Authorization: `Bearer ${res.accessToken}`
               }
             });
-            return next(newReq);
+            return next(retryReq);
           }),
           catchError((refreshError) => {
             authService.logout();

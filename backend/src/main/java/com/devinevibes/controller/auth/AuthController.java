@@ -4,6 +4,7 @@ import com.devinevibes.dto.auth.AuthResponse;
 import com.devinevibes.dto.auth.GoogleLoginRequest;
 import com.devinevibes.dto.auth.OtpRequest;
 import com.devinevibes.dto.auth.OtpVerifyRequest;
+import com.devinevibes.dto.auth.RefreshTokenRequest;
 import com.devinevibes.service.auth.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -33,5 +34,10 @@ public class AuthController {
     @PostMapping("/verify-otp")
     public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody OtpVerifyRequest request) {
         return ResponseEntity.ok(authService.verifyOtp(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refresh(request));
     }
 }

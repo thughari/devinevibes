@@ -4,32 +4,38 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-green: #8bc34a;
-  --color-brand-green-dark: #7cb342;
-  --color-brand-green-light: #dcedc8;
-  --color-brand-dark: #333333;
-  --color-brand-gray: #f5f5f5;
-  --color-brand-text: #555555;
-  --color-dv-green: #8bc34a;
-  
+  --color-brand-green: #1f7a55;
+  --color-brand-green-dark: #164e32;
+  --color-brand-green-light: #439675;
+  --color-brand-gold: #c79a2a;
+  --color-brand-gold-light: #e0bc60;
+  --color-brand-dark: #1a1c1a;
+  --color-brand-gray: #f8f9fa;
+  --color-brand-text: #4a4d4a;
+  --color-dv-green: #1f7a55;
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 }
 
 body {
-  @apply bg-white text-brand-text font-sans antialiased min-h-screen flex flex-col;
+  @apply bg-[#fdfdfb] text-brand-text font-sans antialiased min-h-screen flex flex-col;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  @apply font-sans text-brand-dark font-medium;
+h1, h2, h3 {
+  @apply font-serif text-brand-dark font-semibold tracking-tight;
+}
+
+h4, h5, h6 {
+  @apply font-sans text-brand-dark font-medium uppercase tracking-widest text-sm;
 }
 
 /* Custom scrollbar for light theme */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-[#fdfdfb];
 }
 ::-webkit-scrollbar-thumb {
   @apply bg-gray-300 rounded-full;

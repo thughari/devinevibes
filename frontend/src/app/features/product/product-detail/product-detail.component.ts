@@ -5,6 +5,7 @@ import { ProductResponse } from '../../../shared/models/product.model';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { CurrencyPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -32,73 +33,85 @@ import { MatIconModule } from '@angular/material/icon';
           <!-- Image Gallery -->
           <div class="space-y-4">
             <div class="aspect-square rounded-lg overflow-hidden bg-brand-gray border border-gray-100">
-              <img 
-                [src]="product()?.imageUrl || 'https://picsum.photos/seed/' + product()?.id + '/800/800'" 
+              <img
+                [src]="selectedMedia() || product()?.imageUrl || 'assets/images/placeholder-product.webp'"
                 [alt]="product()?.name"
                 referrerpolicy="no-referrer"
                 class="w-full h-full object-cover"
               />
             </div>
-            <!-- Thumbnails (Mock) -->
             <div class="grid grid-cols-4 gap-4">
-              <div class="aspect-square rounded-md overflow-hidden border-2 border-brand-green bg-brand-gray cursor-pointer">
-                <img [src]="product()?.imageUrl || 'https://picsum.photos/seed/' + product()?.id + '/200/200'" alt="Thumb" class="w-full h-full object-cover opacity-100" referrerpolicy="no-referrer">
-              </div>
-              <div class="aspect-square rounded-md overflow-hidden border border-gray-200 bg-brand-gray cursor-pointer hover:border-brand-green transition-colors">
-                <img src="https://picsum.photos/seed/detail1/200/200" alt="Thumb" class="w-full h-full object-cover opacity-70 hover:opacity-100 transition-opacity" referrerpolicy="no-referrer">
-              </div>
-              <div class="aspect-square rounded-md overflow-hidden border border-gray-200 bg-brand-gray cursor-pointer hover:border-brand-green transition-colors">
-                <img src="https://picsum.photos/seed/detail2/200/200" alt="Thumb" class="w-full h-full object-cover opacity-70 hover:opacity-100 transition-opacity" referrerpolicy="no-referrer">
-              </div>
+              @for (img of (product()?.imageUrls || [product()?.imageUrl]); track img) {
+                @if (img) {
+                  <button type="button" (click)="setSelectedMedia(img)" class="aspect-square rounded-md overflow-hidden border bg-brand-gray cursor-pointer hover:border-brand-green transition-colors">
+                    <img [src]="img" alt="Thumb" class="w-full h-full object-cover" referrerpolicy="no-referrer">
+                  </button>
+                }
+              }
             </div>
+            @if ((product()?.videoUrls || []).length > 0) {
+              <div class="space-y-2">
+                <h4 class="text-sm font-semibold text-brand-dark">Product Videos</h4>
+                @for (videoUrl of product()?.videoUrls || []; track videoUrl) {
+                  <video controls class="w-full rounded-md border border-gray-200 bg-black">
+                    <source [src]="videoUrl" />
+                  </video>
+                }
+              </div>
+            }
           </div>
 
           <!-- Product Info -->
           <div class="flex flex-col">
             <div class="mb-6">
-              <h1 class="text-3xl md:text-4xl font-sans font-bold text-brand-dark mb-4">{{ product()?.name }}</h1>
-              <div class="flex items-center gap-4 mb-6">
-                <span class="text-2xl font-bold text-brand-dark">{{ product()?.price | currency:'INR':'symbol':'1.0-0' }}</span>
-                @if (product()!.stock > 0) {
-                  <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">In Stock</span>
-                } @else {
-                  <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">Out of Stock</span>
-                }
-              </div>
-              
-              <div class="prose prose-sm max-w-none text-brand-text">
-                <p>{{ product()?.description }}</p>
-                <p class="mt-4">
-                  All our products are 100% authentic and properly energized before dispatch. 
-                  Each item comes with a certificate of authenticity.
-                </p>
-              </div>
+              @if (currentProduct) {
+                <h1 class="text-3xl md:text-5xl font-serif font-bold text-brand-dark mb-4 tracking-tight leading-tight">{{ currentProduct.name }}</h1>
+                <div class="flex items-center gap-4 mb-8">
+                  @if (currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price) {
+                    <span class="text-sm text-gray-400 line-through tracking-wider">{{ currentProduct.originalPrice | currency:'INR':'symbol':'1.0-0' }}</span>
+                  }
+                  <span class="text-3xl font-sans font-medium text-brand-dark tracking-wide">{{ currentProduct.price | currency:'INR':'symbol':'1.0-0' }}</span>
+                  @if (currentProduct.stock > 0) {
+                    <span class="px-3 py-1 rounded-sm text-[10px] font-bold bg-[#edf7f2] text-brand-green border border-brand-green/20 uppercase tracking-widest">In Stock</span>
+                  } @else {
+                    <span class="px-3 py-1 rounded-sm text-[10px] font-bold bg-[#fce8e8] text-[#a33838] border border-[#a33838]/20 uppercase tracking-widest">Out of Stock</span>
+                  }
+                </div>
+
+                <div class="prose prose-sm max-w-none text-brand-text font-light leading-relaxed">
+                  <p>{{ product()?.description }}</p>
+                  <p class="mt-4 italic">
+                    All our products are 100% authentic and properly energized before dispatch. 
+                    Each item comes with a certificate of authenticity.
+                  </p>
+                </div>
+              }
             </div>
 
             <!-- Actions -->
             <div class="mt-8 pt-8 border-t border-gray-100">
-              <div class="flex items-center gap-4 mb-6">
-                <label for="quantity" class="text-sm font-medium text-brand-dark">Quantity</label>
-                <div class="flex items-center border border-gray-300 rounded-sm bg-white">
-                  <button (click)="decrementQuantity()" class="px-3 py-1 text-brand-text hover:bg-gray-50 transition-colors disabled:opacity-50" [disabled]="quantity() <= 1">
-                    <mat-icon class="text-sm">remove</mat-icon>
+              <div class="flex items-center gap-4 mb-8">
+                <label for="quantity" class="text-[11px] font-bold uppercase tracking-widest text-brand-dark">Quantity</label>
+                <div class="flex items-center border border-gray-200 rounded-sm bg-white shadow-sm overflow-hidden">
+                  <button (click)="decrementQuantity()" class="px-4 py-2 text-brand-text hover:bg-brand-gray transition-colors disabled:opacity-50" [disabled]="quantity() <= 1">
+                    <mat-icon class="text-sm w-4 h-4 leading-4 flex items-center justify-center">remove</mat-icon>
                   </button>
-                  <input type="number" id="quantity" [value]="quantity()" readonly class="w-12 text-center bg-transparent border-none focus:ring-0 text-brand-dark p-0 sm:text-sm">
-                  <button (click)="incrementQuantity()" class="px-3 py-1 text-brand-text hover:bg-gray-50 transition-colors disabled:opacity-50" [disabled]="quantity() >= product()!.stock">
-                    <mat-icon class="text-sm">add</mat-icon>
+                  <input type="number" id="quantity" [value]="quantity()" readonly class="w-12 text-center bg-transparent border-none focus:ring-0 text-brand-dark p-0 font-medium font-sans">
+                  <button (click)="incrementQuantity()" class="px-4 py-2 text-brand-text hover:bg-brand-gray transition-colors disabled:opacity-50" [disabled]="quantity() >= product()!.stock">
+                    <mat-icon class="text-sm w-4 h-4 leading-4 flex items-center justify-center">add</mat-icon>
                   </button>
                 </div>
-                <span class="text-xs text-brand-text">{{ product()?.stock }} available</span>
+                <span class="text-[10px] uppercase tracking-widest text-brand-text">{{ product()?.stock }} available</span>
               </div>
 
               <div class="flex flex-col sm:flex-row gap-4">
                 <button 
                   (click)="addToCart()"
                   [disabled]="product()?.stock === 0"
-                  class="flex-1 bg-brand-green text-white py-4 px-8 rounded-sm font-medium uppercase tracking-wider hover:bg-brand-green-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md"
+                  class="flex-1 bg-brand-green text-white py-4 px-8 rounded-full font-sans font-medium uppercase tracking-widest hover:bg-brand-gold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_4px_20px_rgba(31,122,85,0.3)] hover:shadow-[0_8px_30px_rgba(199,154,42,0.4)]"
                 >
-                  <mat-icon>shopping_cart</mat-icon>
-                  Add to Cart
+                  <mat-icon class="text-[20px] w-[20px] h-[20px]">shopping_bag</mat-icon>
+                  Add to Bag
                 </button>
                 <button 
                   class="w-full sm:w-auto border border-brand-green text-brand-green py-4 px-6 rounded-sm hover:bg-brand-green/5 transition-colors flex items-center justify-center"
@@ -157,10 +170,16 @@ export class ProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
   private snackbar = inject(SnackbarService);
+  private cartService = inject(CartService);
 
   product = signal<ProductResponse | null>(null);
   isLoading = signal(true);
   quantity = signal(1);
+  selectedMedia = signal<string | null>(null);
+
+  get currentProduct(): ProductResponse | null {
+    return this.product();
+  }
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
@@ -176,21 +195,13 @@ export class ProductDetailComponent implements OnInit {
     this.api.get<ProductResponse>(`/products/${id}`).subscribe({
       next: (data) => {
         this.product.set(data);
+        this.selectedMedia.set((data.imageUrls && data.imageUrls.length > 0) ? data.imageUrls[0] : data.imageUrl || null);
         this.isLoading.set(false);
       },
       error: () => {
-        // Mock data for demo
-        setTimeout(() => {
-          this.product.set({ 
-            id: id, 
-            name: 'Premium 5 Mukhi Rudraksha Mala', 
-            description: 'This authentic 5 Mukhi Rudraksha Mala from Nepal consists of 108+1 carefully selected beads. Five Mukhi Rudraksha is governed by the planet Jupiter and is known to bring peace, good health, and spiritual growth to the wearer. It is the most widely used Rudraksha for chanting mantras and daily wear.', 
-            price: 1500, 
-            stock: 10, 
-            imageUrl: `https://picsum.photos/seed/${id}/800/800` 
-          });
-          this.isLoading.set(false);
-        }, 500);
+        this.product.set(null);
+        this.selectedMedia.set(null);
+        this.isLoading.set(false);
       }
     });
   }
@@ -209,8 +220,12 @@ export class ProductDetailComponent implements OnInit {
 
   addToCart() {
     if (this.product()) {
-      // In real app, call CartService
+      this.cartService.addToCart(this.product()!, this.quantity());
       this.snackbar.showSuccess(`Added ${this.quantity()}x ${this.product()!.name} to cart`);
     }
+  }
+
+  setSelectedMedia(url: string) {
+    this.selectedMedia.set(url);
   }
 }
