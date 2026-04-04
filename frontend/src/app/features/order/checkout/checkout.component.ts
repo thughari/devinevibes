@@ -22,10 +22,10 @@ declare var Razorpay: any;
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1 class="text-3xl md:text-4xl font-sans font-bold text-brand-dark mb-8">Secure Checkout</h1>
 
+      <form [formGroup]="checkoutForm" (ngSubmit)="placeOrder()">
       <div class="lg:grid lg:grid-cols-12 lg:gap-x-12 lg:items-start">
         <!-- Checkout Form -->
         <div class="lg:col-span-7">
-          <form [formGroup]="checkoutForm" (ngSubmit)="placeOrder()">
             
             <!-- Contact Info -->
             <div class="bg-white p-6 rounded-lg border border-gray-200 mb-6 shadow-sm">
@@ -142,7 +142,6 @@ declare var Razorpay: any;
               </div>
             </div>
 
-          </form>
         </div>
 
         <!-- Order Summary -->
@@ -242,8 +241,9 @@ declare var Razorpay: any;
 
             <div class="mt-8">
               <button 
-                type="submit"
-                [disabled]="checkoutForm.invalid || isProcessing()"
+                type="button"
+                (click)="placeOrder()"
+                [disabled]="isProcessing()"
                 class="w-full bg-brand-green text-white py-4 px-4 rounded-sm font-medium uppercase tracking-wider hover:bg-brand-green-dark transition-colors flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
               >
                 @if (isProcessing()) {
@@ -262,6 +262,7 @@ declare var Razorpay: any;
           </div>
         </div>
       </div>
+      </form>
     </div>
   `
 })
@@ -444,6 +445,7 @@ export class CheckoutComponent implements OnInit {
         next: (orderRes) => {
           this.activeOrderId = orderRes.id;
           if (isCod) {
+            this.isPaymentSuccessful = true;
             this.isProcessing.set(false);
             this.snackbar.showSuccess('Order placed successfully via Cash on Delivery!');
             this.router.navigate(['/order/tracking', orderRes.id]);
@@ -594,8 +596,7 @@ export class CheckoutComponent implements OnInit {
       const backendUrl = this.router.url.includes('localhost') ? 'http://localhost:8080' : 'https://api.devinevibes.in';
       const cancelUrl = `${backendUrl}/api/orders/${this.activeOrderId}/cancel`;
       
-      const authService = inject(AuthService);
-      const token = authService.getAccessToken();
+      const token = this.authService.getAccessToken();
       
       if (token) {
         // synchronously send cancel request
