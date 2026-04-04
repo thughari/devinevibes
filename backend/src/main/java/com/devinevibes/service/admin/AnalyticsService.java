@@ -5,7 +5,9 @@ import com.devinevibes.dto.admin.TopSellingProductResponse;
 import com.devinevibes.entity.order.Order;
 import com.devinevibes.entity.order.OrderStatus;
 import com.devinevibes.repository.order.OrderRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -13,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Slf4j
+@Transactional(readOnly = true)
 public class AnalyticsService {
     
     private final OrderRepository orderRepository;

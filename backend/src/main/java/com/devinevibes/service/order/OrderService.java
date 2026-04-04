@@ -34,6 +34,7 @@ import java.util.UUID;
 
 @Service
 @Slf4j
+@Transactional(readOnly = true)
 public class OrderService {
 
     private final OrderRepository orderRepository;

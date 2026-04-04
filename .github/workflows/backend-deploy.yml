@@ -1,0 +1,54 @@
+name: Backend Deploy to Cloud Run
+run-name: "Cloud Deploy #${{ github.run_number }} by @${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: devine-vibes
+  REGION: asia-south1
+  REPO_NAME: backend-repo
+  SERVICE_NAME: devinevibes-backend
+  IMAGE_NAME: devinevibes-backend
+
+
+jobs:
+  deploy:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+
+    # Deploy from master branch
+    if: github.ref == 'refs/heads/master'
+
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Docker Auth
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and Push Image
+        run: |
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          docker build -t $TAG ./backend
+          docker push $TAG
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Update Service YAML
+        run: |
+          sed -i "s|image: .*|image: ${{ env.IMAGE_TAG }}|g" backend/service.yaml
+          cat backend/service.yaml
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          metadata: backend/service.yaml
+          region: ${{ env.REGION }}

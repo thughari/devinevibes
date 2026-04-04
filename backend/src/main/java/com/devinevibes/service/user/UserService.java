@@ -9,11 +9,13 @@ import com.devinevibes.exception.UserNotFoundException;
 import com.devinevibes.repository.user.AddressRepository;
 import com.devinevibes.repository.user.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional(readOnly = true)
 public class UserService {
 
     private final UserRepository userRepository;
@@ -28,6 +30,7 @@ public class UserService {
         return userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 
+    @Transactional
     public User updateProfile(String currentEmail, UpdateUserProfileRequest request) {
         User user = getByEmail(currentEmail);
         if (request.name() != null && !request.name().isBlank()) user.setName(request.name().trim());
@@ -41,6 +44,7 @@ public class UserService {
         return addressRepository.findAllByUserOrderByCreatedAtDesc(user).stream().map(this::toResponse).toList();
     }
 
+    @Transactional
     public AddressResponse createAddress(String email, AddressRequest request) {
         User user = getByEmail(email);
         if (request.isDefault()) unsetDefault(user);
@@ -58,6 +62,7 @@ public class UserService {
         return toResponse(addressRepository.save(address));
     }
 
+    @Transactional
     public void deleteAddress(String email, UUID addressId) {
         User user = getByEmail(email);
         Address address = addressRepository.findByIdAndUser(addressId, user)
@@ -65,6 +70,7 @@ public class UserService {
         addressRepository.delete(address);
     }
 
+    @Transactional
     public AddressResponse updateAddress(String email, UUID addressId, AddressRequest request) {
         User user = getByEmail(email);
         Address address = addressRepository.findByIdAndUser(addressId, user)
