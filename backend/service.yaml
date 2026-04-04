@@ -1,0 +1,186 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: devinevibes-backend
+  labels:
+    cloud.googleapis.com/location: asia-south1
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "5"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      serviceAccountName: github-actions-deployer
+      containers:
+      - image: asia-south1-docker.pkg.dev/devine-vibes/backend-repo/devinevibes-backend:v1
+
+        ports:
+          - containerPort: 8080
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: "1"
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
+
+        # Database
+        - name: JDBC_URL
+          valueFrom:
+            secretKeyRef:
+              name: jdbc-url
+              key: latest
+        - name: JDBC_USER
+          valueFrom:
+            secretKeyRef:
+              name: jdbc-user
+              key: latest
+        - name: JDBC_PASS
+          valueFrom:
+            secretKeyRef:
+              name: jdbc-pass
+              key: latest
+
+        # Redis
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-url
+              key: latest
+
+        # Security & Auth
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: latest
+        - name: JWT_REFRESH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-refresh-secret
+              key: latest
+        - name: GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: google-id
+              key: latest
+        - name: GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: google-secret
+              key: latest
+
+        # Cloudflare R2
+        - name: CLOUDFLARE_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-access-key
+              key: latest
+        - name: CLOUDFLARE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-secret-key
+              key: latest
+        - name: CLOUDFLARE_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-endpoint
+              key: latest
+        - name: CLOUDFLARE_AVATAR_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-avatar-bucket
+              key: latest
+        - name: CLOUDFLARE_PRODUCT_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-product-bucket
+              key: latest
+        - name: CLOUDFLARE_AVATAR_URL
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-avatar-url
+              key: latest
+        - name: CLOUDFLARE_PRODUCT_URL
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-product-url
+              key: latest
+
+        # Razorpay
+        - name: RAZORPAY_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: razorpay-key-id
+              key: latest
+        - name: RAZORPAY_KEY_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: razorpay-key-secret
+              key: latest
+
+        # Shiprocket
+        - name: SHIPROCKET_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: shiprocket-email
+              key: latest
+        - name: SHIPROCKET_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: shiprocket-password
+              key: latest
+
+        # Twilio
+        - name: TWILIO_SID
+          valueFrom:
+            secretKeyRef:
+              name: twilio-sid
+              key: latest
+        - name: TWILIO_AUTH
+          valueFrom:
+            secretKeyRef:
+              name: twilio-auth
+              key: latest
+
+        # Email
+        - name: EMAIL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: email-host
+              key: latest
+        - name: EMAIL_PORT
+          valueFrom:
+            secretKeyRef:
+              name: email-port
+              key: latest
+        - name: EMAIL_USER_NAME
+          valueFrom:
+            secretKeyRef:
+              name: email-user-name
+              key: latest
+        - name: EMAIL_SMTP_KEY
+          valueFrom:
+            secretKeyRef:
+              name: email-smtp-key
+              key: latest
+        - name: EMAIL_SENDER
+          valueFrom:
+            secretKeyRef:
+              name: email-sender
+              key: latest
+        - name: EMAIL_SENDER_NAME
+          valueFrom:
+            secretKeyRef:
+              name: email-sender-name
+              key: latest
+        - name: EMAIL_SENDER_ADDRESS
+          valueFrom:
+            secretKeyRef:
+              name: email-sender-address
+              key: latest
