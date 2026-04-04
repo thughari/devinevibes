@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@Transactional(readOnly = true)
 public class ProductService {
 
     private final ProductRepository productRepository;
@@ -36,6 +37,7 @@ public class ProductService {
         return map(fetchEntity(id));
     }
 
+    @Transactional
     public ProductResponse create(CreateProductRequest request) {
         Product product = new Product();
         product.setName(request.name());
@@ -47,6 +49,7 @@ public class ProductService {
         return map(productRepository.save(product));
     }
 
+    @Transactional
     public ProductResponse update(UUID id, CreateProductRequest request) {
         Product p = fetchEntity(id);
 
