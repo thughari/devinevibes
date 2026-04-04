@@ -39,12 +39,12 @@ public class Product {
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "url")
-    private List<String> imageUrls = new ArrayList<>();
+    private java.util.Set<String> imageUrls = new java.util.LinkedHashSet<>();
 
     @ElementCollection
     @CollectionTable(name = "product_videos", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "url")
-    private List<String> videoUrls = new ArrayList<>();
+    private java.util.Set<String> videoUrls = new java.util.LinkedHashSet<>();
 
     private Instant createdAt = Instant.now();
 }

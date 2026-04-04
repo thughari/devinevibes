@@ -118,8 +118,12 @@ public class ProductService {
     }
 
     private ProductResponse map(Product p) {
-        var images = p.getImageUrls() == null ? List.<String>of() : p.getImageUrls();
-        var videos = p.getVideoUrls() == null ? List.<String>of() : p.getVideoUrls();
+        var imagesSet = p.getImageUrls() == null ? java.util.Set.<String>of() : p.getImageUrls();
+        var videosSet = p.getVideoUrls() == null ? java.util.Set.<String>of() : p.getVideoUrls();
+        
+        List<String> images = new java.util.ArrayList<>(imagesSet);
+        List<String> videos = new java.util.ArrayList<>(videosSet);
+        
         String thumbnail = p.getImageUrl();
         if ((thumbnail == null || thumbnail.isBlank()) && !images.isEmpty()) {
             thumbnail = images.get(0);
@@ -130,12 +134,12 @@ public class ProductService {
     private void applyMedia(CreateProductRequest request, Product product) {
         product.setImageUrl(request.imageUrl());
         if (request.imageUrls() != null) {
-            product.setImageUrls(new java.util.ArrayList<>(request.imageUrls().stream().filter(u -> u != null && !u.isBlank()).toList()));
+            product.setImageUrls(new java.util.LinkedHashSet<>(request.imageUrls().stream().filter(u -> u != null && !u.isBlank()).toList()));
         } else if (request.imageUrl() != null && !request.imageUrl().isBlank()) {
-            product.setImageUrls(new java.util.ArrayList<>(List.of(request.imageUrl())));
+            product.setImageUrls(new java.util.LinkedHashSet<>(List.of(request.imageUrl())));
         }
         if (request.videoUrls() != null) {
-            product.setVideoUrls(new java.util.ArrayList<>(request.videoUrls().stream().filter(u -> u != null && !u.isBlank()).toList()));
+            product.setVideoUrls(new java.util.LinkedHashSet<>(request.videoUrls().stream().filter(u -> u != null && !u.isBlank()).toList()));
         }
     }
 }
