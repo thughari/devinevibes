@@ -1,5 +1,5 @@
 import { Component, inject, signal, afterNextRender } from '@angular/core';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe, TitleCasePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { ApiService } from '../../../core/services/api.service';
@@ -10,11 +10,14 @@ import { CouponResponse } from '../../../shared/models/coupon.model';
 import { lastValueFrom } from 'rxjs';
 import { StoreConfigResponse } from '../../../shared/models/config.model';
 import { AnalyticsResponse } from '../../../shared/models/analytics.model';
+import { CategoryService } from '../../../core/services/category.service';
+import { Category } from '../../../shared/models/category.model';
+import { Banner, BannerRequest } from '../../../shared/models/banner.model';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CurrencyPipe, DatePipe, MatIconModule, ReactiveFormsModule],
+  imports: [CommonModule, MatIconModule, ReactiveFormsModule, TitleCasePipe],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
@@ -52,6 +55,45 @@ import { AnalyticsResponse } from '../../../shared/models/analytics.model';
             <div class="space-y-2">
               <label class="text-sm font-medium text-gray-600">Stock</label>
               <input formControlName="stock" type="number" placeholder="Stock" class="w-full border border-gray-300 focus:border-dv-green focus:ring focus:ring-dv-green/30 rounded-lg px-3 py-2" />
+            </div>
+
+            <div class="space-y-2">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                  <label class="block text-xs font-bold text-brand-text mb-1 uppercase tracking-widest">Category</label>
+                  <select formControlName="categoryId" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-green focus:ring-brand-green sm:text-sm border py-2">
+                    <option value="">Select Category</option>
+                    @for (cat of categories(); track cat.id) {
+                      <option [value]="cat.id">{{ cat.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <!-- Shipping Dimensions -->
+                <div class="col-span-2 mt-2">
+                   <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3 border-b border-gray-100 pb-1">Shipping Specs (Shiprocket)</h4>
+                   <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Weight (Grams)</label>
+                        <input formControlName="weight" type="number" class="block w-full rounded-md border-gray-300 sm:text-sm border p-2" placeholder="e.g. 500">
+                      </div>
+                      <div class="grid grid-cols-3 gap-2">
+                        <div>
+                          <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">L (cm)</label>
+                          <input formControlName="length" type="number" class="block w-full rounded-md border-gray-300 sm:text-sm border p-2">
+                        </div>
+                        <div>
+                          <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">B (cm)</label>
+                          <input formControlName="breadth" type="number" class="block w-full rounded-md border-gray-300 sm:text-sm border p-2">
+                        </div>
+                        <div>
+                          <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">H (cm)</label>
+                          <input formControlName="height" type="number" class="block w-full rounded-md border-gray-300 sm:text-sm border p-2">
+                        </div>
+                      </div>
+                   </div>
+                </div>
+              </div>
             </div>
 
             <div class="space-y-2">
@@ -164,6 +206,8 @@ import { AnalyticsResponse } from '../../../shared/models/analytics.model';
           <button (click)="activeTab.set('products')" [class.text-dv-green]="activeTab() === 'products'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Products</button>
           <button (click)="activeTab.set('orders')" [class.text-dv-green]="activeTab() === 'orders'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Orders</button>
           <button (click)="activeTab.set('coupons')" [class.text-dv-green]="activeTab() === 'coupons'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Coupons</button>
+          <button (click)="activeTab.set('categories')" [class.text-dv-green]="activeTab() === 'categories'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Categories</button>
+          <button (click)="activeTab.set('banners')" [class.text-dv-green]="activeTab() === 'banners'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Banners</button>
           <button (click)="activeTab.set('settings')" [class.text-dv-green]="activeTab() === 'settings'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent focus:outline-none">Store Settings</button>
         </nav>
       </div>
@@ -244,8 +288,8 @@ import { AnalyticsResponse } from '../../../shared/models/analytics.model';
                       <div class="flex items-center gap-3">
                         <img class="h-10 w-10 rounded-lg object-cover border flex-shrink-0" [src]="p.imageUrl" alt="">
                         <div class="min-w-0">
-                          <div class="text-sm font-medium text-gray-900 truncate">{{ p.name }}</div>
-                          <div class="text-xs text-gray-500 truncate w-24 sm:w-full">ID: {{ p.id }}</div>
+                          <a [href]="'/products/' + p.id" target="_blank" class="text-sm font-medium text-gray-900 truncate hover:text-dv-green transition-colors">{{ p.name }}</a>
+                          <div class="text-xs text-gray-500 truncate w-24 sm:w-full">{{ p.productCode }}</div>
                         </div>
                       </div>
                     </td>
@@ -328,7 +372,7 @@ import { AnalyticsResponse } from '../../../shared/models/analytics.model';
                           <!-- Status Bar -->
                           <div class="flex flex-wrap items-center gap-3 mb-4">
                             <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-gray-900 text-white shadow-sm ring-1 ring-white/10">
-                              #{{ order.id.substring(0, 8) }}
+                              {{ order.orderNumber }}
                             </span>
                             
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
@@ -731,6 +775,14 @@ import { AnalyticsResponse } from '../../../shared/models/analytics.model';
                   <input formControlName="codFee" type="number" class="block w-full rounded-md border-gray-300 pl-7 focus:border-dv-green focus:ring-dv-green sm:text-sm border py-2 disabled:bg-gray-100" placeholder="e.g. 50">
                 </div>
               </div>
+
+              <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Cancellation Window (Hours)</label>
+                <p class="text-xs text-gray-500 mb-3">Orders pending payment will be automatically cancelled after this many hours.</p>
+                <div class="relative rounded-md shadow-sm">
+                  <input formControlName="cancellationWindowHours" type="number" class="block w-full rounded-md border-gray-300 focus:border-dv-green focus:ring-dv-green sm:text-sm border py-2 px-3 disabled:bg-gray-100" placeholder="e.g. 2">
+                </div>
+              </div>
               
               @if (editConfigMode()) {
                 <div class="md:col-span-2 pt-4 flex justify-end">
@@ -738,6 +790,167 @@ import { AnalyticsResponse } from '../../../shared/models/analytics.model';
                 </div>
               }
             </form>
+          </div>
+        } @else if (activeTab() === 'banners') {
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h2 class="text-xl font-bold text-gray-800">Banner Management</h2>
+                <p class="text-sm text-gray-500">Create global announcement banners for marketing.</p>
+              </div>
+              @if (!showBannerForm()) {
+                <button (click)="openAddBanner()" class="bg-dv-green text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-green-700 transition-colors flex items-center gap-2 shadow-sm">
+                  <mat-icon class="text-[18px]">add</mat-icon> Add Banner
+                </button>
+              }
+            </div>
+
+            @if (showBannerForm()) {
+              <div class="bg-gray-50 border border-gray-100 rounded-2xl p-6 mb-8">
+                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-4">{{ editingBannerId() ? 'Edit Banner' : 'Create Banner' }}</h3>
+                <form [formGroup]="bannerForm" (ngSubmit)="saveBanner()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="col-span-2 space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Banner Content (HTML supported)</label>
+                    <textarea formControlName="content" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. <b>50% OFF</b> on all guitars!"></textarea>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Type</label>
+                    <select formControlName="type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                      <option value="INFO">Info (Green)</option>
+                      <option value="SALE">Sale (Gold)</option>
+                      <option value="ALERT">Alert (Red)</option>
+                    </select>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Priority (Higher shows first)</label>
+                    <input formControlName="priority" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Redirect Link (e.g. /products)</label>
+                    <input formControlName="link" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Expiry Date (for Countdown)</label>
+                    <input formControlName="expiryDate" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div class="flex items-center gap-6 py-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" formControlName="active" class="w-4 h-4 text-dv-green rounded focus:ring-dv-green/30" />
+                      <span class="text-sm font-medium text-gray-700">Published</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" formControlName="canDismiss" class="w-4 h-4 text-dv-green rounded focus:ring-dv-green/30" />
+                      <span class="text-sm font-medium text-gray-700">User can dismiss</span>
+                    </label>
+                  </div>
+                  <div class="col-span-2 flex items-center gap-3 pt-2">
+                    <button type="button" (click)="closeBannerForm()" class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 transition">Cancel</button>
+                    <button type="submit" [disabled]="bannerForm.invalid" class="bg-dv-green text-white px-6 py-2 rounded-lg font-medium text-sm shadow-sm hover:bg-green-700 transition">Save Banner</button>
+                  </div>
+                </form>
+              </div>
+            }
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              @for (b of banners(); track b.id) {
+                <div class="border border-gray-100 bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                  <div class="absolute top-0 right-0 p-2 flex gap-1">
+                    <button (click)="editBanner(b)" class="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"><mat-icon class="text-[18px]">edit</mat-icon></button>
+                    <button (click)="confirmDelete('banner', b.id, 'Banner ' + b.priority)" class="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"><mat-icon class="text-[18px]">delete</mat-icon></button>
+                  </div>
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase border"
+                          [class.bg-green-50]="b.type === 'INFO'" [class.text-green-700]="b.type === 'INFO'"
+                          [class.bg-amber-50]="b.type === 'SALE'" [class.text-amber-700]="b.type === 'SALE'"
+                          [class.bg-red-50]="b.type === 'ALERT'" [class.text-red-700]="b.type === 'ALERT'">
+                      {{ b.type }}
+                    </span>
+                    <span class="text-[10px] font-bold text-gray-400">PRIORITY: {{ b.priority }}</span>
+                    @if (!b.active) {
+                      <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-500 text-[10px] font-bold uppercase tracking-widest">Draft</span>
+                    }
+                  </div>
+                  <p class="text-sm font-medium text-gray-900 mb-2 truncate">{{ b.content }}</p>
+                  <div class="flex flex-wrap gap-2 items-center text-[10px] font-bold text-gray-400">
+                    <span class="flex items-center gap-1"><mat-icon class="text-[12px] w-3 h-3">link</mat-icon> {{ b.link || 'No link' }}</span>
+                    @if (b.expiryDate) {
+                      <span class="flex items-center gap-1 text-amber-600"><mat-icon class="text-[12px] w-3 h-3">timer</mat-icon> {{ b.expiryDate | date:'short' }}</span>
+                    }
+                    @if (b.canDismiss) {
+                      <span class="flex items-center gap-1 text-dv-green"><mat-icon class="text-[12px] w-3 h-3">check_circle_outline</mat-icon> Dismissible</span>
+                    }
+                  </div>
+                </div>
+              } @empty {
+                <div class="col-span-full py-12 text-center text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl">
+                  <mat-icon class="text-4xl mb-2">campaign</mat-icon>
+                  <p>No banners created yet.</p>
+                </div>
+              }
+            </div>
+          </div>
+        } @else if (activeTab() === 'categories') {
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h2 class="text-xl font-bold text-gray-800">Category Management</h2>
+                <p class="text-sm text-gray-500">Organize your products into meaningful groups.</p>
+              </div>
+              @if (!showCategoryForm()) {
+                <button (click)="openAddCategory()" class="bg-dv-green text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-green-700 transition-colors flex items-center gap-2 shadow-sm">
+                  <mat-icon class="text-[18px]">add</mat-icon> Add Category
+                </button>
+              }
+            </div>
+
+            @if (showCategoryForm()) {
+              <div class="bg-gray-50 border border-gray-100 rounded-2xl p-6 mb-8">
+                <h3 class="text-md font-semibold text-gray-700 mb-4">{{ editingCategoryId() ? 'Edit Category' : 'Create Category' }}</h3>
+                <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()" class="space-y-4 max-w-2xl">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase">Name</label>
+                      <input formControlName="name" placeholder="e.g. Incense Sticks" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
+                    </div>
+                    <div class="space-y-1">
+                      <label class="text-xs font-bold text-gray-500 uppercase">Slug (optional)</label>
+                      <input formControlName="slug" placeholder="e.g. incense-sticks" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
+                    </div>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Description</label>
+                    <textarea formControlName="description" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20"></textarea>
+                  </div>
+                  <div class="flex items-center gap-3 pt-2">
+                    <button type="button" (click)="closeCategoryForm()" class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 transition">Cancel</button>
+                    <button type="submit" [disabled]="categoryForm.invalid" class="bg-dv-green text-white px-6 py-2 rounded-lg font-medium text-sm shadow-sm hover:bg-green-700 transition">Save Category</button>
+                  </div>
+                </form>
+              </div>
+            }
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              @for (cat of categories(); track cat.id) {
+                <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex justify-between items-start">
+                  <div>
+                    <p class="font-bold text-gray-900">{{ cat.name }}</p>
+                    <p class="text-xs text-gray-500 font-mono">{{ cat.slug }}</p>
+                    @if (cat.description) {
+                      <p class="text-xs text-gray-400 mt-2 line-clamp-2">{{ cat.description }}</p>
+                    }
+                  </div>
+                  <div class="flex gap-1">
+                    <button (click)="editCategory(cat)" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><mat-icon class="text-[20px]">edit</mat-icon></button>
+                    <button (click)="confirmDelete('category', cat.id, cat.name)" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><mat-icon class="text-[20px]">delete</mat-icon></button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="col-span-full py-12 text-center text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl">
+                  <mat-icon class="text-4xl mb-2">category</mat-icon>
+                  <p>No categories defined yet.</p>
+                </div>
+              }
+            </div>
           </div>
         }
       </div>
@@ -749,7 +962,7 @@ import { AnalyticsResponse } from '../../../shared/models/analytics.model';
             <div class="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mb-5 mx-auto shadow-inner">
               <mat-icon class="text-red-500 w-8 h-8 text-[32px] flex items-center justify-center">warning_amber</mat-icon>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Delete {{ deleteConfirm()?.type === 'product' ? 'Product' : 'Coupon' }}?</h3>
+            <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Delete {{ deleteConfirm()?.type | titlecase }}?</h3>
             <p class="text-sm text-gray-500 text-center mb-6">Are you sure you want to delete <strong class="text-gray-800 font-semibold">{{ deleteConfirm()?.name }}</strong>? This action cannot be undone.</p>
             <div class="flex gap-3">
               <button (click)="deleteConfirm.set(null)" class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-medium transition-colors">Cancel</button>
@@ -765,7 +978,9 @@ export class AdminDashboardComponent {
   private api = inject(ApiService);
   private snackbar = inject(SnackbarService);
   private fb = inject(FormBuilder);
-  activeTab = signal<'products' | 'orders' | 'coupons' | 'settings' | 'analytics'>('analytics');
+  private categoryService = inject(CategoryService);
+
+  activeTab = signal<'products' | 'orders' | 'coupons' | 'settings' | 'analytics' | 'categories' | 'banners'>('analytics');
   expandedOrderId = signal<string | null>(null);
   showAddProduct = signal(false);
   showAdvanced = signal(false);
@@ -773,7 +988,33 @@ export class AdminDashboardComponent {
   showCouponForm = signal(false);
   editingCouponId = signal<string | null>(null);
   showStatusDropdown = signal(false);
-  deleteConfirm = signal<{ type: 'product' | 'coupon', id: string, name: string } | null>(null);
+
+  // Categories
+  categories = signal<Category[]>([]);
+  showCategoryForm = signal(false);
+  editingCategoryId = signal<string | null>(null);
+  categoryForm = this.fb.group({
+    name: ['', Validators.required],
+    slug: [''],
+    description: [''],
+    active: [true]
+  });
+
+  // Banners
+  banners = signal<Banner[]>([]);
+  showBannerForm = signal(false);
+  editingBannerId = signal<string | null>(null);
+  bannerForm = this.fb.group({
+    content: ['', Validators.required],
+    type: ['INFO', Validators.required],
+    link: [''],
+    priority: [0],
+    active: [true],
+    canDismiss: [true],
+    expiryDate: [null as string | null]
+  });
+
+  deleteConfirm = signal<{ type: 'product' | 'coupon' | 'category' | 'banner', id: string, name: string } | null>(null);
   products = signal<ProductResponse[]>([]);
   ordersPage = signal<PageResponse<OrderResponse> | null>(null);
   ordersSearch = signal<string>('');
@@ -813,7 +1054,12 @@ export class AdminDashboardComponent {
     price: [0, [Validators.required, Validators.min(0)]],
     originalPrice: [null as number | null],
     stock: [0, [Validators.required, Validators.min(0)]],
-    imageUrl: ['']
+    imageUrl: [''],
+    categoryId: [''],
+    weight: [null as number | null],
+    length: [null as number | null],
+    breadth: [null as number | null],
+    height: [null as number | null]
   });
 
   editingProductId: string | null = null;
@@ -849,7 +1095,8 @@ export class AdminDashboardComponent {
   configForm = this.fb.group({
     freeShippingThreshold: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0)]],
     standardShippingCost: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0)]],
-    codFee: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0)]]
+    codFee: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0)]],
+    cancellationWindowHours: [{ value: 2, disabled: true }, [Validators.required, Validators.min(1)]]
   });
 
   editConfigMode = signal(false);
@@ -942,6 +1189,8 @@ export class AdminDashboardComponent {
     this.api.get<CouponResponse[]>('/admin/coupons').subscribe({ next: (coupons) => this.coupons.set(coupons) });
     this.api.get<StoreConfigResponse>('/config').subscribe({ next: (config) => this.configForm.patchValue(config) });
     this.api.get<AnalyticsResponse>('/admin/analytics').subscribe({ next: (analytics) => this.analytics.set(analytics) });
+    this.categoryService.getAdminCategories().subscribe({ next: (cats) => this.categories.set(cats) });
+    this.api.get<Banner[]>('/admin/banners').subscribe({ next: (banners) => this.banners.set(banners) });
   }
 
   onSearch(query: string) {
@@ -992,7 +1241,7 @@ export class AdminDashboardComponent {
     this.addProductForm.reset();
   }
 
-  confirmDelete(type: 'product' | 'coupon', id: string, name: string) {
+  confirmDelete(type: 'product' | 'coupon' | 'category' | 'banner', id: string, name: string) {
     this.deleteConfirm.set({ type, id, name });
   }
 
@@ -1009,7 +1258,7 @@ export class AdminDashboardComponent {
         },
         error: () => this.snackbar.showError('Unable to delete product')
       });
-    } else {
+    } else if (target.type === 'coupon') {
       this.api.delete<void>(`/admin/coupons/${target.id}`).subscribe({
         next: () => {
           this.coupons.update(list => list.filter(c => c.id !== target.id));
@@ -1017,6 +1266,24 @@ export class AdminDashboardComponent {
           this.snackbar.showSuccess('Coupon deleted successfully');
         },
         error: () => this.snackbar.showError('Unable to delete coupon')
+      });
+    } else if (target.type === 'category') {
+      this.categoryService.deleteCategory(target.id).subscribe({
+        next: () => {
+          this.categories.update(list => list.filter(c => c.id !== target.id));
+          this.deleteConfirm.set(null);
+          this.snackbar.showSuccess('Category deleted successfully');
+        },
+        error: () => this.snackbar.showError('Unable to delete category. Ensure it has no products.')
+      });
+    } else if (target.type === 'banner') {
+      this.api.delete<void>(`/admin/banners/${target.id}`).subscribe({
+        next: () => {
+          this.banners.update(list => list.filter(b => b.id !== target.id));
+          this.deleteConfirm.set(null);
+          this.snackbar.showSuccess('Banner deleted');
+        },
+        error: () => this.snackbar.showError('Failed to delete banner')
       });
     }
   }
@@ -1045,7 +1312,12 @@ export class AdminDashboardComponent {
       price: product.price,
       originalPrice: product.originalPrice ?? null,
       stock: product.stock,
-      imageUrl: product.imageUrl || ''
+      imageUrl: product.imageUrl || '',
+      categoryId: product.categoryId || '',
+      weight: product.weight || null,
+      length: product.length || null,
+      breadth: product.breadth || null,
+      height: product.height || null
     });
     this.thumbnailPreview = product.imageUrl || null;
     this.existingImageUrls = product.imageUrls ? [...product.imageUrls] : [];
@@ -1078,7 +1350,7 @@ export class AdminDashboardComponent {
           }
           this.editingProductId = null;
           this.showAddProduct.set(false);
-          this.addProductForm.reset({ name: '', description: '', price: 0, originalPrice: null, stock: 0, imageUrl: '' });
+          this.addProductForm.reset({ name: '', description: '', price: 0, originalPrice: null, stock: 0, imageUrl: '', categoryId: '', weight: null, length: null, breadth: null, height: null });
           this.thumbnailFile = null;
           this.thumbnailPreview = null;
           this.productImageFiles = [];
@@ -1154,4 +1426,106 @@ export class AdminDashboardComponent {
   }
 
   createCoupon() { this.saveCoupon(); }
+
+  // Category Methods
+  openAddCategory() {
+    this.editingCategoryId.set(null);
+    this.categoryForm.reset({ active: true });
+    this.showCategoryForm.set(true);
+  }
+
+  editCategory(cat: Category) {
+    this.editingCategoryId.set(cat.id);
+    this.categoryForm.patchValue({
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description,
+      active: cat.active
+    });
+    this.showCategoryForm.set(true);
+  }
+
+  closeCategoryForm() {
+    this.showCategoryForm.set(false);
+    this.editingCategoryId.set(null);
+    this.categoryForm.reset();
+  }
+
+  saveCategory() {
+    if (this.categoryForm.invalid) return;
+    const payload = this.categoryForm.value as Partial<Category>;
+    const id = this.editingCategoryId();
+    
+    const request$ = id 
+      ? this.categoryService.updateCategory(id, payload)
+      : this.categoryService.createCategory(payload);
+
+    request$.subscribe({
+      next: (cat) => {
+        if (id) {
+          this.categories.update(list => list.map(c => c.id === cat.id ? cat : c));
+          this.snackbar.showSuccess('Category updated');
+        } else {
+          this.categories.update(list => [...list, cat]);
+          this.snackbar.showSuccess('Category created');
+        }
+        this.closeCategoryForm();
+      },
+      error: () => this.snackbar.showError('Failed to save category')
+    });
+  }
+
+  // Banner Methods
+  openAddBanner() {
+    this.editingBannerId.set(null);
+    this.bannerForm.reset({ active: true, type: 'INFO', priority: 0, canDismiss: true });
+    this.showBannerForm.set(true);
+  }
+
+  editBanner(banner: Banner) {
+    this.editingBannerId.set(banner.id);
+    this.bannerForm.patchValue({
+      content: banner.content,
+      type: banner.type,
+      link: banner.link,
+      priority: banner.priority,
+      active: banner.active,
+      canDismiss: banner.canDismiss,
+      expiryDate: banner.expiryDate ? new Date(banner.expiryDate).toISOString().slice(0, 16) : null
+    });
+    this.showBannerForm.set(true);
+  }
+
+  closeBannerForm() {
+    this.showBannerForm.set(false);
+    this.editingBannerId.set(null);
+    this.bannerForm.reset();
+  }
+
+  saveBanner() {
+    if (this.bannerForm.invalid) return;
+    const payload = this.bannerForm.getRawValue() as BannerRequest;
+    if (payload.expiryDate) {
+      payload.expiryDate = new Date(payload.expiryDate).toISOString();
+    }
+    
+    const id = this.editingBannerId();
+    const request$ = id 
+      ? this.api.put<Banner>(`/admin/banners/${id}`, payload)
+      : this.api.post<Banner>('/admin/banners', payload);
+
+    request$.subscribe({
+      next: (res) => {
+        if (id) {
+          this.banners.update(list => list.map(b => b.id === res.id ? res : b));
+          this.snackbar.showSuccess('Banner updated');
+        } else {
+          this.banners.update(list => [res, ...list]);
+          this.snackbar.showSuccess('Banner created');
+        }
+        this.closeBannerForm();
+      },
+      error: () => this.snackbar.showError('Failed to save banner')
+    });
+  }
 }

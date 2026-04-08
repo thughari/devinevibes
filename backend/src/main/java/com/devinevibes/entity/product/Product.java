@@ -20,6 +20,13 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(unique = true)
+    private String productCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private com.devinevibes.entity.category.Category category;
+
     @Column(nullable = false)
     private String name;
 
@@ -47,4 +54,10 @@ public class Product {
     private java.util.Set<String> videoUrls = new java.util.LinkedHashSet<>();
 
     private Instant createdAt = Instant.now();
+
+    // Shipping Dimensions (in grams and cm)
+    private java.math.BigDecimal weight;
+    private java.math.BigDecimal length;
+    private java.math.BigDecimal breadth;
+    private java.math.BigDecimal height;
 }

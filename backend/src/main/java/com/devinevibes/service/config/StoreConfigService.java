@@ -30,18 +30,21 @@ public class StoreConfigService {
     }
 
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "config", key = "'current'")
     public StoreConfigResponse getConfig() {
         StoreConfig config = getConfigEntity();
-        return new StoreConfigResponse(config.getFreeShippingThreshold(), config.getStandardShippingCost(), config.getCodFee());
+        return new StoreConfigResponse(config.getFreeShippingThreshold(), config.getStandardShippingCost(), config.getCodFee(), config.getCancellationWindowHours());
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "config", allEntries = true)
     public StoreConfigResponse updateConfig(UpdateStoreConfigRequest request) {
         StoreConfig config = getConfigEntity();
         config.setFreeShippingThreshold(request.freeShippingThreshold());
         config.setStandardShippingCost(request.standardShippingCost());
         config.setCodFee(request.codFee());
+        config.setCancellationWindowHours(request.cancellationWindowHours());
         configRepository.save(config);
-        return new StoreConfigResponse(config.getFreeShippingThreshold(), config.getStandardShippingCost(), config.getCodFee());
+        return new StoreConfigResponse(config.getFreeShippingThreshold(), config.getStandardShippingCost(), config.getCodFee(), config.getCancellationWindowHours());
     }
 }

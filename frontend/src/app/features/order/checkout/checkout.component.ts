@@ -364,6 +364,7 @@ export class CheckoutComponent implements OnInit {
     city: ['', Validators.required],
     state: ['', Validators.required],
     postalCode: ['', Validators.required],
+    alternatePhone: [''],
   });
 
   constructor() {
@@ -437,7 +438,8 @@ export class CheckoutComponent implements OnInit {
       const req = {
         ...this.checkoutForm.value,
         paymentMethod: isCod ? 'COD' : 'Prepaid',
-        couponCode: this.couponCode.value?.trim() || null
+        couponCode: this.couponCode.value?.trim() || null,
+        alternatePhone: this.checkoutForm.value.alternatePhone || null
       };
 
       // Stage 1: Lock Order in the DB

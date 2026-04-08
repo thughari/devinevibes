@@ -1,0 +1,101 @@
+﻿Folder PATH listing for volume Games
+Volume serial number is 5CF9-2D76
+D:.
+|   app.config.server.ts
+|   app.config.ts
+|   app.routes.server.ts
+|   app.routes.ts
+|   app.spec.ts
+|   app.ts
+|   
++---core
+|   +---guards
+|   |       auth.guard.ts
+|   |       
+|   +---interceptors
+|   |       auth.interceptor.ts
+|   |       error.interceptor.ts
+|   |       
+|   \---services
+|           api.service.ts
+|           auth.service.ts
+|           cart.service.ts
+|           config.service.ts
+|           
++---features
+|   +---about
+|   |       about.component.ts
+|   |       
+|   +---admin
+|   |   \---admin-dashboard
+|   |           admin-dashboard.component.ts
+|   |           
+|   +---auth
+|   |   +---login
+|   |   |       login.component.ts
+|   |   |       
+|   |   \---register
+|   |           register.component.ts
+|   |           
+|   +---cart
+|   |       cart.component.ts
+|   |       
+|   +---contact
+|   |       contact.component.ts
+|   |       
+|   +---home
+|   |       home.component.ts
+|   |       
+|   +---order
+|   |   +---checkout
+|   |   |       checkout.component.ts
+|   |   |       
+|   |   +---order-history
+|   |   |       order-history.component.ts
+|   |   |       
+|   |   \---order-tracking
+|   |           order-tracking.component.ts
+|   |           
+|   +---product
+|   |   +---product-detail
+|   |   |       product-detail.component.ts
+|   |   |       
+|   |   \---product-list
+|   |           product-list.component.ts
+|   |           
+|   +---static
+|   |       faq.component.ts
+|   |       returns.component.ts
+|   |       shipping.component.ts
+|   |       
+|   \---user
+|       \---profile
+|               profile.component.ts
+|               
+\---shared
+    +---components
+    |   +---footer
+    |   |       footer.component.ts
+    |   |       
+    |   +---navbar
+    |   |       navbar.component.ts
+    |   |       
+    |   +---product-card
+    |   |       product-card.component.ts
+    |   |       
+    |   \---snackbar-container
+    |           snackbar-container.component.ts
+    |           
+    +---models
+    |       analytics.model.ts
+    |       auth.model.ts
+    |       cart.model.ts
+    |       config.model.ts
+    |       coupon.model.ts
+    |       order.model.ts
+    |       product.model.ts
+    |       user.model.ts
+    |       
+    \---services
+            snackbar.service.ts
+            

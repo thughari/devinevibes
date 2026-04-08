@@ -7,10 +7,16 @@ export interface CreateProductRequest {
   imageUrl?: string;
   imageUrls?: string[];
   videoUrls?: string[];
+  categoryId?: string;
+  weight?: number;
+  length?: number;
+  breadth?: number;
+  height?: number;
 }
 
 export interface ProductResponse {
   id: string;
+  productCode: string;
   name: string;
   description: string;
   price: number;
@@ -19,4 +25,10 @@ export interface ProductResponse {
   imageUrl?: string;
   imageUrls?: string[];
   videoUrls?: string[];
+  categoryId?: string;
+  categoryName?: string;
+  weight?: number;
+  length?: number;
+  breadth?: number;
+  height?: number;
 }

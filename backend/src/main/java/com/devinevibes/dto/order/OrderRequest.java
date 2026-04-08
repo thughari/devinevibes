@@ -11,5 +11,6 @@ public record OrderRequest(
         @NotBlank String state,
         @NotBlank String postalCode,
         String paymentMethod,
-        String couponCode
+        String couponCode,
+        String alternatePhone
 ) {}

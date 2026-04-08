@@ -21,6 +21,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(unique = true)
+    private String orderNumber;
+
     @ManyToOne(optional = false)
     private User user;
 
@@ -43,6 +46,9 @@ public class Order {
 
     private String shipmentId;
     private String trackingId;
+    private String refundId;
+    private String refundStatus;
+    private Instant refundedAt;
 
     private String paymentMethod;
     private String appliedCoupon;
@@ -53,11 +59,18 @@ public class Order {
     private String shippingLastName;
     private String shippingEmail;
     private String shippingPhone;
+    private String alternatePhone;
     private String shippingAddress;
     private String shippingCity;
     private String shippingState;
     private String shippingPostalCode;
 
     private String cancellationReason;
+    
+    // Cost Breakdown Persistence
+    private BigDecimal subtotalAmount;
+    private BigDecimal shippingCost;
+    private BigDecimal codFee;
+
     private Instant createdAt = Instant.now();
 }

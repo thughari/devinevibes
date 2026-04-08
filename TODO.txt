@@ -1,7 +1,16 @@
 need to create product id's in a good way not like the random uuid! and customers should receive a meaningful order id!(in the orders tab too)
 and in the mail we should show the entire cost breakup too! and also a link to manage orders!(link to orders page)
 
+signup flow should be smooth and user friendly! (also add the option to sign up with google) ans the login flow should also be smooth and user friendly! (also add the option to login with google)
+the login and signup page should be designed in a way that it should be easy to use and should be responsive for mobile devices too!(mobile first design)
+add a search bar on the products page and also add filters for price, category, etc.
+
+
 product on the the admin products page when clicked on it it should redirect to the product url
+
+what if the user is in checkout page and the refresh flow was triggered?
+
+when ordering if any new address is used we should save that address automatically in the user's address book and also show that address in the address book for future use!
 
 need to redefine the order confirmation page(need to show the entire cost breakup like the delivery, if coupon applied and final paid) (also when clicked on the product on orders it should redirect to the order page)
 

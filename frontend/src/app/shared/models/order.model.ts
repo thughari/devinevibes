@@ -9,6 +9,7 @@ export interface OrderItemResponse {
 
 export interface OrderResponse {
   id: string;
+  orderNumber: string;
   totalAmount: number;
   orderStatus: string;
   paymentStatus: string;
@@ -26,6 +27,10 @@ export interface OrderResponse {
   shippingPhone?: string;
   shippingFirstName?: string;
   shippingLastName?: string;
+  subtotalAmount?: number;
+  shippingCost?: number;
+  codFee?: number;
+  couponDiscount?: number;
 }
 
 export interface OrderRequest {

@@ -83,7 +83,7 @@ public class EmailService {
 
             helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
             helper.setTo(order.getShippingEmail());
-            helper.setSubject("Your Devine Vibes Order Confirmation — #" + order.getId().toString().substring(0, 8).toUpperCase());
+            helper.setSubject("Your Devine Vibes Order Confirmation — " + order.getOrderNumber());
 
             StringBuilder itemsHtml = new StringBuilder();
             for (com.devinevibes.entity.order.OrderItem item : order.getItems()) {
@@ -97,43 +97,67 @@ public class EmailService {
                         .append("</tr>");
             }
 
+            // Cost Breakdown logic
+            StringBuilder costBreakdown = new StringBuilder();
+            if (order.getSubtotalAmount() != null) {
+                costBreakdown.append("<div style='display: flex; justify-content: space-between; font-size: 14px; color: #64748b; margin-bottom: 5px;'>")
+                             .append("<span>Subtotal</span><span>₹").append(order.getSubtotalAmount()).append("</span></div>");
+            }
+            if (order.getShippingCost() != null && order.getShippingCost().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                costBreakdown.append("<div style='display: flex; justify-content: space-between; font-size: 14px; color: #64748b; margin-bottom: 5px;'>")
+                             .append("<span>Shipping</span><span>₹").append(order.getShippingCost()).append("</span></div>");
+            }
+            if (order.getCodFee() != null && order.getCodFee().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                costBreakdown.append("<div style='display: flex; justify-content: space-between; font-size: 14px; color: #64748b; margin-bottom: 5px;'>")
+                             .append("<span>COD Fee</span><span>₹").append(order.getCodFee()).append("</span></div>");
+            }
+            if (order.getCouponDiscount() != null && order.getCouponDiscount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                costBreakdown.append("<div style='display: flex; justify-content: space-between; font-size: 14px; color: #16a34a; margin-bottom: 5px;'>")
+                             .append("<span>Coupon Discount</span><span>-₹").append(order.getCouponDiscount()).append("</span></div>");
+            }
+
             String htmlContent = """
-                <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Georgia', serif; color: #1e293b;">
-                    <div style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b;">
+                    <div style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                         <div style="background-color: #0f172a; padding: 30px; text-align: center;">
                             <img src="https://devinevibes.in/logo.jpeg" alt="Devine Vibes" style="height: 60px;">
                         </div>
                         
                         <div style="padding: 40px; border-top: 4px solid #c59d5f;">
-                            <h2 style="color: #b45309; text-transform: uppercase; letter-spacing: 2px; font-size: 14px; margin-bottom: 10px;">Order Confirmed</h2>
-                            <h1 style="color: #0f172a; font-size: 28px; margin-top: 0; margin-bottom: 25px; font-weight: normal;">Thank you for your purchase, %s.</h1>
+                            <h2 style="color: #b45309; text-transform: uppercase; letter-spacing: 2px; font-size: 12px; margin-bottom: 10px; font-weight: 800;">Order Confirmed</h2>
+                            <h1 style="color: #0f172a; font-size: 24px; margin-top: 0; margin-bottom: 25px; font-weight: normal;">Thank you for your purchase, %s.</h1>
                             
                             <p style="font-size: 15px; line-height: 1.6; color: #475569;">We've received your order and we're getting it ready to ship. We'll notify you the moment it's on its way.</p>
                             
-                            <div style="margin: 40px 0; padding: 25px; background-color: #fcfcfc; border: 1px solid #f1f5f9;">
-                                <h3 style="margin-top: 0; font-size: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; color: #0f172a;">Summary — Order #%s</h3>
-                                <table style="width: 100%%; border-collapse: collapse;">
+                            <div style="margin: 40px 0; padding: 25px; background-color: #fcfcfc; border: 1px solid #f1f5f9; border-radius: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 15px;">
+                                    <h3 style="margin: 0; font-size: 16px; color: #0f172a;">Summary — Order #%s</h3>
+                                    <span style="font-size: 12px; color: #64748b;">%s</span>
+                                </div>
+                                <table style="width: 100%%; border-collapse: collapse; margin-bottom: 20px;">
                                     <tbody>
                                         %s
                                     </tbody>
                                 </table>
                                 
-                                <div style="margin-top: 20px; text-align: right;">
-                                    <div style="font-size: 14px; color: #64748b;">Subtotal & Shipping</div>
-                                    <div style="font-size: 24px; color: #b45309; font-weight: bold; margin-top: 5px;">Total: ₹%s</div>
-                                    <div style="font-size: 12px; color: #94a3b8; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">Paid via %s</div>
+                                <div style="border-top: 1px solid #f1f5f9; pt: 20px; text-align: right;">
+                                    %s
+                                    <div style="font-size: 28px; color: #0f172a; font-weight: bold; margin-top: 10px;">Total: ₹%s</div>
+                                    <div style="font-size: 12px; color: #94a3b8; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">Payment via %s</div>
                                 </div>
                             </div>
+
+                            <div style="text-align: center; margin-bottom: 40px;">
+                                <a href="%s/order/history" style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 18px 35px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; letter-spacing: 1px; text-transform: uppercase;">Manage Your Orders</a>
+                            </div>
                             
-                            <div style="display: flex; flex-direction: column; gap: 20px;">
-                                <div style="flex: 1;">
-                                    <h4 style="margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #64748b; letter-spacing: 1px;">Shipping To</h4>
-                                    <p style="margin: 0; font-size: 14px; color: #1e293b; line-height: 1.6;">
-                                        %s %s<br>
-                                        %s<br>
-                                        %s, %s — %s
-                                    </p>
-                                </div>
+                            <div style="background-color: #f8fafc; padding: 20px; border-radius: 4px;">
+                                <h4 style="margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 1px;">Shipping To</h4>
+                                <p style="margin: 0; font-size: 14px; color: #1e293b; line-height: 1.6;">
+                                    <strong>%s %s</strong><br>
+                                    %s<br>
+                                    %s, %s — %s
+                                </p>
                             </div>
                         </div>
                         
@@ -145,10 +169,13 @@ public class EmailService {
                 </div>
                 """.formatted(
                     order.getShippingFirstName(), 
-                    order.getId().toString().substring(0, 8).toUpperCase(), 
+                    order.getOrderNumber(),
+                    java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy").withZone(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.Instant.now()),
                     itemsHtml.toString(), 
+                    costBreakdown.toString(),
                     order.getTotalAmount().toString(),
                     "COD".equalsIgnoreCase(order.getPaymentMethod()) ? "Cash on Delivery" : "Secure Online Payment",
+                    uiUrl,
                     order.getShippingFirstName(), 
                     order.getShippingLastName() != null ? order.getShippingLastName() : "",
                     order.getShippingAddress(),

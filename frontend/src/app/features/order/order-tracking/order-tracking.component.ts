@@ -3,6 +3,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { CurrencyPipe } from '@angular/common';
 import { ApiService } from '../../../core/services/api.service';
+import { SnackbarService } from '../../../shared/services/snackbar.service';
+import { ConfigService } from '../../../core/services/config.service';
 import { OrderResponse } from '../../../shared/models/order.model';
 
 const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'] as const;
@@ -26,8 +28,8 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
             <span class="font-mono text-gray-900 font-medium">{{ tracking()?.paymentMethod || 'Prepaid' }}</span>
           </div>
           <div class="mt-6 inline-block bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm ml-2">
-            <span class="text-sm text-gray-500 mr-2">Order ID:</span>
-            <span class="font-mono text-gray-900 font-medium">{{ orderId() }}</span>
+            <span class="text-sm text-gray-500 mr-2">Order:</span>
+            <span class="font-mono text-gray-900 font-bold">{{ tracking()?.orderNumber || orderId() }}</span>
           </div>
           @if (tracking()?.trackingId) {
             <div class="mt-2 inline-block bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm ml-2">
@@ -39,7 +41,14 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
 
         <!-- Tracking Timeline -->
         <div class="px-6 py-10 sm:px-10">
-          <h2 class="text-xl font-sans font-medium text-gray-900 mb-8">Tracking Status</h2>
+          <div class="flex justify-between items-center mb-8">
+            <h2 class="text-xl font-sans font-medium text-gray-900">Tracking Status</h2>
+            @if (canCancel()) {
+              <button (click)="cancelOrder()" class="text-xs font-bold text-red-600 hover:text-red-700 uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-full border border-red-100 transition-all">
+                Cancel Order
+              </button>
+            }
+          </div>
           
           @if (loading()) {
             <p class="text-sm text-gray-400 text-center py-8">Loading tracking info...</p>
@@ -72,29 +81,61 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
           }
         </div>
         
-        <!-- Ordered Items Block -->
+        <!-- Ordered Items & Cost Breakup -->
         @if (tracking()?.items?.length) {
           <div class="px-6 pb-10 sm:px-10 pt-4 border-t border-gray-100">
-            <h2 class="text-xl font-sans font-medium text-gray-900 mb-6">Items in Order</h2>
-            <div class="flow-root">
+            <h2 class="text-xl font-sans font-medium text-gray-900 mb-6">Order Summary</h2>
+            <div class="flow-root mb-8">
               <ul role="list" class="-my-4 divide-y divide-gray-200">
                 @for (item of tracking()!.items; track item.productId) {
-                  <li class="flex py-4 transition-colors hover:bg-gray-50 rounded-lg pr-4 cursor-pointer" [routerLink]="['/product', item.productId]">
-                    <div class="flex-shrink-0 w-20 h-20 border border-gray-200 rounded-lg overflow-hidden ml-2 shadow-sm">
+                  <li class="flex py-4 group" [routerLink]="['/product', item.productId]">
+                    <div class="flex-shrink-0 w-16 h-16 border border-gray-200 rounded-lg overflow-hidden shadow-sm group-hover:border-dv-green transition-colors">
                       <img [src]="item.imageUrl || 'assets/images/placeholder-product.webp'" alt="Product" class="w-full h-full object-cover">
                     </div>
                     <div class="ml-4 flex-1 flex flex-col justify-center">
-                      <div class="flex justify-between text-base font-medium text-brand-dark">
-                        <h3 class="font-sans hover:text-dv-green transition-colors">{{ item.productName }}</h3>
+                      <div class="flex justify-between text-sm font-medium text-brand-dark">
+                        <h3 class="font-sans group-hover:text-dv-green transition-colors">{{ item.productName }}</h3>
                         <p class="font-bold text-brand-dark">{{ item.totalPrice | currency:'INR':'symbol':'1.0-0' }}</p>
                       </div>
-                      <div class="mt-1 flex items-end justify-between text-sm">
-                        <p class="text-gray-500">Qty {{ item.quantity }} × {{ item.unitPrice | currency:'INR':'symbol':'1.0-0' }}</p>
+                      <div class="mt-1 flex items-end justify-between text-xs text-gray-500">
+                        <p>Qty {{ item.quantity }} × {{ item.unitPrice | currency:'INR':'symbol':'1.0-0' }}</p>
                       </div>
                     </div>
                   </li>
                 }
               </ul>
+            </div>
+
+            <!-- Cost Breakup -->
+            <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+              <dl class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Subtotal</dt>
+                  <dd class="font-medium text-gray-900">{{ tracking()?.subtotalAmount | currency:'INR':'symbol':'1.0-0' }}</dd>
+                </div>
+                @if (tracking()?.shippingCost) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-500">Shipping</dt>
+                    <dd class="font-medium text-gray-900">{{ tracking()?.shippingCost | currency:'INR':'symbol':'1.0-0' }}</dd>
+                  </div>
+                }
+                @if (tracking()?.codFee) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-500">COD Fee</dt>
+                    <dd class="font-medium text-gray-900">{{ tracking()?.codFee | currency:'INR':'symbol':'1.0-0' }}</dd>
+                  </div>
+                }
+                @if (tracking()?.couponDiscount) {
+                  <div class="flex justify-between text-green-600">
+                    <dt>Coupon Discount</dt>
+                    <dd class="font-medium">-{{ tracking()?.couponDiscount | currency:'INR':'symbol':'1.0-0' }}</dd>
+                  </div>
+                }
+                <div class="flex justify-between pt-3 border-t border-gray-200 text-base font-bold text-gray-900">
+                  <dt>Total Amount</dt>
+                  <dd>{{ tracking()?.totalAmount | currency:'INR':'symbol':'1.0-0' }}</dd>
+                </div>
+              </dl>
             </div>
           </div>
         }
@@ -113,6 +154,8 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
 export class OrderTrackingComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
+  private snackbar = inject(SnackbarService);
+  private configService = inject(ConfigService);
   orderId = signal<string>('');
   tracking = signal<OrderResponse | null>(null);
   loading = signal(true);
@@ -163,6 +206,35 @@ export class OrderTrackingComponent implements OnInit {
 
   isCurrentStep(stepKey: string): boolean {
     return this.tracking()?.orderStatus === stepKey;
+  }
+
+  canCancel = computed(() => {
+    const order = this.tracking();
+    if (!order || order.orderStatus !== 'PAYMENT_SUCCESS') return false;
+    
+    const config = this.configService.config();
+    const windowHours = config?.cancellationWindowHours || 2;
+    const createdAtStr = order.createdAt;
+    if (!createdAtStr) return false;
+    const createdAt = new Date(createdAtStr).getTime();
+    const cutoff = createdAt + (windowHours * 60 * 60 * 1000);
+    return Date.now() < cutoff;
+  });
+
+  cancelOrder() {
+    const id = this.orderId();
+    if (!id) return;
+    
+    if (confirm('Are you sure you want to cancel this order? An automated refund will be initiated if payment was successful.')) {
+      this.api.post(`/orders/${id}/cancel`, {}).subscribe({
+        next: () => {
+          this.snackbar.showSuccess('Order cancelled successfully. Refund initiated.');
+          // Refresh order data
+          this.ngOnInit();
+        },
+        error: (err: any) => this.snackbar.showError(err?.error?.message || 'Failed to cancel order')
+      });
+    }
   }
 }
 

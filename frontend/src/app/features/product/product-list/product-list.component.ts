@@ -8,11 +8,14 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
 import { TitleCasePipe } from '@angular/common';
 import { CartService } from '../../../core/services/cart.service';
+import { CategoryService } from '../../../core/services/category.service';
+import { Category } from '../../../shared/models/category.model';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [ProductCardComponent, MatIconModule, TitleCasePipe],
+  imports: [ProductCardComponent, MatIconModule, TitleCasePipe, FormsModule],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <!-- Header -->
@@ -24,50 +27,112 @@ import { CartService } from '../../../core/services/cart.service';
           <p class="text-brand-text">Discover our sacred and authentic spiritual items.</p>
         </div>
         
-        <!-- Filters -->
-        <div class="mt-6 md:mt-0 flex gap-4 relative">
-          <button 
-            (click)="isSortDropdownOpen.set(!isSortDropdownOpen())"
-            (blur)="closeDropdownDelay()"
-            class="bg-white border border-gray-200 text-brand-dark font-sans text-sm rounded-full px-5 py-2.5 flex items-center justify-between min-w-[220px] hover:border-brand-gold transition-colors focus:outline-none focus:ring-1 focus:ring-brand-gold shadow-sm"
-          >
-            <span class="tracking-wide">Sort by: <span class="font-medium ml-1">{{ getSortLabel() }}</span></span>
-            <mat-icon class="text-gray-400 text-[20px] transition-transform duration-300 {{ isSortDropdownOpen() ? 'rotate-180' : '' }}">expand_more</mat-icon>
-          </button>
+      <!-- Search and Filter Bar -->
+      <div class="flex flex-col lg:flex-row gap-6 mb-12">
+        <!-- Sidebar Filters -->
+        <aside class="w-full lg:w-64 space-y-8">
+          <!-- Search -->
+          <div class="relative group">
+            <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-dv-green transition-colors">search</mat-icon>
+            <input 
+              type="text" 
+              [(ngModel)]="searchQuery" 
+              (ngModelChange)="onFilterChange()"
+              placeholder="Search products..." 
+              class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:border-dv-green focus:ring-4 focus:ring-dv-green/10 outline-none transition-all"
+            />
+          </div>
 
-          @if (isSortDropdownOpen()) {
-            <div class="absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white border border-gray-100 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] overflow-hidden z-20">
-              <button (click)="selectSort('featured')" class="w-full text-left px-5 py-3 text-sm transition-colors text-brand-dark hover:bg-[#FAFAFA] hover:text-brand-gold {{ sortBy() === 'featured' ? 'bg-[#FAFAFA] text-brand-gold font-medium' : '' }}">Featured</button>
-              <button (click)="selectSort('price_asc')" class="w-full text-left px-5 py-3 text-sm transition-colors text-brand-dark hover:bg-[#FAFAFA] hover:text-brand-gold {{ sortBy() === 'price_asc' ? 'bg-[#FAFAFA] text-brand-gold font-medium' : '' }}">Price: Low to High</button>
-              <button (click)="selectSort('price_desc')" class="w-full text-left px-5 py-3 text-sm transition-colors text-brand-dark hover:bg-[#FAFAFA] hover:text-brand-gold {{ sortBy() === 'price_desc' ? 'bg-[#FAFAFA] text-brand-gold font-medium' : '' }}">Price: High to Low</button>
-              <button (click)="selectSort('newest')" class="w-full text-left px-5 py-3 text-sm transition-colors text-brand-dark hover:bg-[#FAFAFA] hover:text-brand-gold {{ sortBy() === 'newest' ? 'bg-[#FAFAFA] text-brand-gold font-medium' : '' }}">Newest Arrivals</button>
+          <!-- Category Filter -->
+          <div>
+            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Categories</h3>
+            <div class="flex flex-wrap lg:flex-col gap-2">
+              <button 
+                (click)="selectCategory(null)"
+                [class.bg-dv-green]="!selectedCategoryId()"
+                [class.text-white]="!selectedCategoryId()"
+                class="px-4 py-2 rounded-xl text-sm font-medium border border-transparent hover:bg-gray-100 transition-all text-left"
+              >
+                All Products
+              </button>
+              @for (cat of categories(); track cat.id) {
+                <button 
+                  (click)="selectCategory(cat.id)"
+                  [class.bg-dv-green]="selectedCategoryId() === cat.id"
+                  [class.text-white]="selectedCategoryId() === cat.id"
+                  class="px-4 py-2 rounded-xl text-sm font-medium border border-transparent hover:bg-gray-100 transition-all text-left"
+                >
+                  {{ cat.name }}
+                </button>
+              }
             </div>
+          </div>
+
+          <!-- Price Filter -->
+          <div>
+            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Price Range</h3>
+            <div class="space-y-4">
+              <div class="flex items-center gap-2">
+                <input type="number" [(ngModel)]="minPrice" (ngModelChange)="onFilterChange()" placeholder="Min" class="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-dv-green outline-none" />
+                <span class="text-gray-400">-</span>
+                <input type="number" [(ngModel)]="maxPrice" (ngModelChange)="onFilterChange()" placeholder="Max" class="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-dv-green outline-none" />
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Product Grid -->
+        <div class="flex-1">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <p class="text-sm text-gray-500">Showing <span class="font-bold text-gray-900">{{ filteredProducts().length }}</span> products</p>
+            
+            <div class="relative">
+              <button 
+                (click)="isSortDropdownOpen.set(!isSortDropdownOpen())"
+                (blur)="closeDropdownDelay()"
+                class="bg-white border border-gray-100 text-sm rounded-xl px-4 py-2.5 flex items-center gap-2 hover:border-dv-green transition-colors focus:outline-none shadow-sm"
+              >
+                <span class="text-gray-500">Sort:</span>
+                <span class="font-bold text-gray-900">{{ getSortLabel() }}</span>
+                <mat-icon class="text-gray-400 text-[20px] transition-transform {{ isSortDropdownOpen() ? 'rotate-180' : '' }}">expand_more</mat-icon>
+              </button>
+
+              @if (isSortDropdownOpen()) {
+                <div class="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden z-20">
+                  <button (click)="selectSort('featured')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'featured' ? 'text-dv-green font-bold' : '' }}">Featured</button>
+                  <button (click)="selectSort('price_asc')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'price_asc' ? 'text-dv-green font-bold' : '' }}">Low to High</button>
+                  <button (click)="selectSort('price_desc')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'price_desc' ? 'text-dv-green font-bold' : '' }}">High to Low</button>
+                  <button (click)="selectSort('newest')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'newest' ? 'text-dv-green font-bold' : '' }}">Newest Arrivals</button>
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (isLoading()) {
+            <div class="flex justify-center items-center h-64">
+              <mat-icon class="animate-spin text-dv-green text-4xl">refresh</mat-icon>
+            </div>
+          } @else {
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              @for (product of filteredProducts(); track product.id) {
+                <app-product-card 
+                  [product]="product" 
+                  (addToCart)="onAddToCart($event)"
+                />
+              }
+            </div>
+            
+            @if (filteredProducts().length === 0) {
+              <div class="text-center py-20 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                <mat-icon class="text-6xl text-gray-300 mb-4">search_off</mat-icon>
+                <h3 class="text-xl font-bold text-gray-900 mb-1">No products found</h3>
+                <p class="text-sm text-gray-500">Try adjusting your filters or search query.</p>
+                <button (click)="resetFilters()" class="mt-6 text-dv-green font-bold hover:underline">Clear all filters</button>
+              </div>
+            }
           }
         </div>
       </div>
-
-      @if (isLoading()) {
-        <div class="flex justify-center items-center h-64">
-          <mat-icon class="animate-spin text-brand-green text-4xl">refresh</mat-icon>
-        </div>
-      } @else {
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          @for (product of products(); track product.id) {
-            <app-product-card 
-              [product]="product" 
-              (addToCart)="onAddToCart($event)"
-            />
-          }
-        </div>
-        
-        @if (products().length === 0) {
-          <div class="text-center py-20">
-            <mat-icon class="text-6xl text-gray-300 mb-4">inventory_2</mat-icon>
-            <h3 class="text-xl font-sans font-medium text-brand-dark mb-2">No products found</h3>
-            <p class="text-brand-text">Try adjusting your filters or category.</p>
-          </div>
-        }
-      }
     </div>
   `
 })
@@ -78,15 +143,86 @@ export class ProductListComponent implements OnInit {
   private cartService = inject(CartService);
 
   products = signal<ProductResponse[]>([]);
+  filteredProducts = signal<ProductResponse[]>([]);
+  categories = signal<Category[]>([]);
   isLoading = signal(true);
   category = signal<string | null>(null);
+  selectedCategoryId = signal<string | null>(null);
   sortBy = signal<'featured' | 'price_asc' | 'price_desc' | 'newest'>('featured');
+
+  // Filter state
+  searchQuery = '';
+  minPrice: number | null = null;
+  maxPrice: number | null = null;
+
+  private categoryService = inject(CategoryService);
 
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
-      this.category.set(params['category'] || null);
+      if (params['category']) {
+        this.selectedCategoryId.set(params['category']);
+      }
       this.fetchProducts();
+      this.fetchCategories();
     });
+  }
+
+  fetchCategories() {
+    this.categoryService.getCategories().subscribe(cats => this.categories.set(cats));
+  }
+
+  onFilterChange() {
+    let filtered = [...this.products()];
+
+    // Search
+    if (this.searchQuery) {
+      const q = this.searchQuery.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(q) || 
+        p.description.toLowerCase().includes(q) ||
+        p.productCode.toLowerCase().includes(q)
+      );
+    }
+
+    // Category
+    if (this.selectedCategoryId()) {
+      filtered = filtered.filter(p => p.categoryId === this.selectedCategoryId());
+    }
+
+    // Price
+    if (this.minPrice !== null) {
+      filtered = filtered.filter(p => p.price >= this.minPrice!);
+    }
+    if (this.maxPrice !== null) {
+      filtered = filtered.filter(p => p.price <= this.maxPrice!);
+    }
+
+    this.filteredProducts.set(filtered);
+    this.sortFilteredProducts(this.sortBy());
+  }
+
+  selectCategory(id: string | null) {
+    this.selectedCategoryId.set(id);
+    this.onFilterChange();
+  }
+
+  resetFilters() {
+    this.searchQuery = '';
+    this.selectedCategoryId.set(null);
+    this.minPrice = null;
+    this.maxPrice = null;
+    this.onFilterChange();
+  }
+
+  sortFilteredProducts(value: 'featured' | 'price_asc' | 'price_desc' | 'newest') {
+    const sorted = [...this.filteredProducts()];
+    switch (value) {
+      case 'price_asc': sorted.sort((a, b) => Number(a.price) - Number(b.price)); break;
+      case 'price_desc': sorted.sort((a, b) => Number(b.price) - Number(a.price)); break;
+      case 'newest': sorted.sort((a, b) => (a.id < b.id ? 1 : -1)); break;
+      default: break;
+    }
+    this.filteredProducts.set(sorted);
   }
 
   sortProducts(value: 'featured' | 'price_asc' | 'price_desc' | 'newest') {
@@ -120,11 +256,12 @@ export class ProductListComponent implements OnInit {
     this.api.get<ProductResponse[]>('/products', params).subscribe({
       next: (data) => {
         this.products.set(data);
-        this.sortProducts(this.sortBy());
+        this.onFilterChange(); // This handles sorting too
         this.isLoading.set(false);
       },
       error: () => {
         this.products.set([]);
+        this.filteredProducts.set([]);
         this.isLoading.set(false);
         this.snackbar.showError('Unable to load products right now.');
       }
@@ -145,7 +282,7 @@ export class ProductListComponent implements OnInit {
 
   selectSort(value: 'featured' | 'price_asc' | 'price_desc' | 'newest') {
     this.sortBy.set(value);
-    this.sortProducts(value);
+    this.sortFilteredProducts(value);
     this.isSortDropdownOpen.set(false);
   }
 

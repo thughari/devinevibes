@@ -88,6 +88,29 @@ public class UserService {
         return toResponse(addressRepository.save(address));
     }
 
+    @Transactional
+    public void autoSaveAddress(User user, com.devinevibes.dto.order.OrderRequest request) {
+        if (user == null) return;
+        
+        // Check if this address (line1 + postalCode) already exists for the user
+        boolean exists = addressRepository.findAllByUserOrderByCreatedAtDesc(user).stream()
+                .anyMatch(a -> a.getLine1().equalsIgnoreCase(request.address().trim()) 
+                        && a.getPostalCode().equals(request.postalCode().trim()));
+        
+        if (!exists) {
+            Address address = new Address();
+            address.setUser(user);
+            address.setLine1(request.address().trim());
+            address.setCity(request.city().trim());
+            address.setState(request.state().trim());
+            address.setPostalCode(request.postalCode().trim());
+            address.setCountry("India"); // Default for now
+            address.setLabel("Order Address");
+            address.setDefault(false);
+            addressRepository.save(address);
+        }
+    }
+
     private void unsetDefault(User user) {
         var addresses = addressRepository.findAllByUserOrderByCreatedAtDesc(user);
         addresses.forEach(a -> a.setDefault(false));

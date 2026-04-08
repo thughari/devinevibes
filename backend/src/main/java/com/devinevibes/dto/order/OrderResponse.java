@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record OrderResponse(
         UUID id,
+        String orderNumber,
         BigDecimal totalAmount,
         OrderStatus orderStatus,
         PaymentStatus paymentStatus,
@@ -24,5 +25,9 @@ public record OrderResponse(
         String shippingPostalCode,
         String shippingPhone,
         String shippingFirstName,
-        String shippingLastName
+        String shippingLastName,
+        BigDecimal subtotalAmount,
+        BigDecimal shippingCost,
+        BigDecimal codFee,
+        BigDecimal couponDiscount
 ) {}

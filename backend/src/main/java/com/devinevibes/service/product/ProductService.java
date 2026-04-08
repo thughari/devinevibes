@@ -22,22 +22,27 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final StorageService storageService;
     private final CartRepository cartRepository;
+    private final com.devinevibes.service.category.CategoryService categoryService;
 
-    public ProductService(ProductRepository productRepository, StorageService storageService, CartRepository cartRepository) {
+    public ProductService(ProductRepository productRepository, StorageService storageService, CartRepository cartRepository, com.devinevibes.service.category.CategoryService categoryService) {
         this.productRepository = productRepository;
         this.storageService = storageService;
         this.cartRepository = cartRepository;
+        this.categoryService = categoryService;
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "products", key = "'all'")
     public List<ProductResponse> getAll() {
         return productRepository.findAll().stream().map(this::map).toList();
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "products", key = "#id")
     public ProductResponse getById(UUID id) {
         return map(fetchEntity(id));
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "products", allEntries = true)
     public ProductResponse create(CreateProductRequest request) {
         Product product = new Product();
         product.setName(request.name());
@@ -45,11 +50,19 @@ public class ProductService {
         product.setPrice(request.price());
         product.setOriginalPrice(request.originalPrice());
         product.setStock(request.stock());
+        if (request.categoryId() != null) {
+            product.setCategory(categoryService.getCategoryById(request.categoryId()));
+        }
+        product.setWeight(request.weight());
+        product.setLength(request.length());
+        product.setBreadth(request.breadth());
+        product.setHeight(request.height());
         applyMedia(request, product);
         return map(productRepository.save(product));
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "products", allEntries = true)
     public ProductResponse update(UUID id, CreateProductRequest request) {
         Product p = fetchEntity(id);
 
@@ -63,6 +76,13 @@ public class ProductService {
         p.setPrice(request.price());
         p.setOriginalPrice(request.originalPrice());
         p.setStock(request.stock());
+        if (request.categoryId() != null) {
+            p.setCategory(categoryService.getCategoryById(request.categoryId()));
+        }
+        p.setWeight(request.weight());
+        p.setLength(request.length());
+        p.setBreadth(request.breadth());
+        p.setHeight(request.height());
         applyMedia(request, p);
 
         Set<String> newMedia = new HashSet<>();
@@ -80,6 +100,7 @@ public class ProductService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "products", allEntries = true)
     public void delete(UUID id) {
         Product p = fetchEntity(id);
         
@@ -128,7 +149,15 @@ public class ProductService {
         if ((thumbnail == null || thumbnail.isBlank()) && !images.isEmpty()) {
             thumbnail = images.get(0);
         }
-        return new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getOriginalPrice(), p.getStock(), thumbnail, images, videos);
+        String catId = p.getCategory() != null ? p.getCategory().getId().toString() : null;
+        String catName = p.getCategory() != null ? p.getCategory().getName() : "Uncategorized";
+        
+        return new ProductResponse(
+            p.getId(), p.getProductCode(), p.getName(), p.getDescription(), 
+            p.getPrice(), p.getOriginalPrice(), p.getStock(), thumbnail, 
+            images, videos, catId, catName,
+            p.getWeight(), p.getLength(), p.getBreadth(), p.getHeight()
+        );
     }
 
     private void applyMedia(CreateProductRequest request, Product product) {

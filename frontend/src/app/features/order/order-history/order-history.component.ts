@@ -25,7 +25,7 @@ import { OrderResponse } from '../../../shared/models/order.model';
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-3 mb-2">
-                    <span class="text-xs font-mono text-gray-400 bg-gray-50 px-2 py-1 rounded">{{ order.id.substring(0, 8) }}...</span>
+                    <span class="text-xs font-mono text-gray-400 bg-gray-50 px-2 py-1 rounded">{{ order.orderNumber }}</span>
                     <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
                           [class.bg-yellow-100]="order.orderStatus === 'PENDING'"
                           [class.text-yellow-800]="order.orderStatus === 'PENDING'"

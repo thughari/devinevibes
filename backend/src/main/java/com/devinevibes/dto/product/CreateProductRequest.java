@@ -13,5 +13,10 @@ public record CreateProductRequest(
         @NotNull @Min(0) Integer stock,
         String imageUrl,
         List<String> imageUrls,
-        List<String> videoUrls
+        List<String> videoUrls,
+        java.util.UUID categoryId,
+        java.math.BigDecimal weight,
+        java.math.BigDecimal length,
+        java.math.BigDecimal breadth,
+        java.math.BigDecimal height
 ) {}

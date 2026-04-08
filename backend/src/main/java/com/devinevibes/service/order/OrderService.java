@@ -45,8 +45,15 @@ public class OrderService {
     private final StoreConfigService storeConfigService;
     private final EmailService emailService;
     private final CouponService couponService;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+    
+    @org.springframework.beans.factory.annotation.Value("${razorpay.key.id}")
+    private String razorpayKey;
+    
+    @org.springframework.beans.factory.annotation.Value("${razorpay.key.secret}")
+    private String razorpaySecret;
 
-    public OrderService(OrderRepository orderRepository, CartService cartService, UserService userService, ShiprocketClient shiprocketClient, ProductService productService, StoreConfigService storeConfigService, com.devinevibes.service.notification.EmailService emailService, com.devinevibes.service.coupon.CouponService couponService) {
+    public OrderService(OrderRepository orderRepository, CartService cartService, UserService userService, ShiprocketClient shiprocketClient, ProductService productService, StoreConfigService storeConfigService, com.devinevibes.service.notification.EmailService emailService, com.devinevibes.service.coupon.CouponService couponService, org.springframework.data.redis.core.StringRedisTemplate redisTemplate) {
         this.orderRepository = orderRepository;
         this.cartService = cartService;
         this.userService = userService;
@@ -55,6 +62,7 @@ public class OrderService {
         this.storeConfigService = storeConfigService;
         this.emailService = emailService;
         this.couponService = couponService;
+        this.redisTemplate = redisTemplate;
     }
 
     @Transactional
@@ -76,6 +84,18 @@ public class OrderService {
         Order order = new Order();
         order.setUser(userService.getByEmail(email));
         
+        // Generate Order Number: DV-YYMMDD-XXXX
+        String datePart = java.time.format.DateTimeFormatter.ofPattern("yyMMdd")
+                .withZone(java.time.ZoneId.of("Asia/Kolkata"))
+                .format(Instant.now());
+        String redisKey = "order:counter:" + datePart;
+        Long counter = redisTemplate.opsForValue().increment(redisKey);
+        if (counter != null && counter == 1) {
+            redisTemplate.expire(redisKey, java.time.Duration.ofDays(2));
+        }
+        String orderNumber = String.format("DV-%s-%04d", datePart, counter != null ? counter : 1);
+        order.setOrderNumber(orderNumber);
+        
         // Save shipping context
         order.setShippingEmail(request.email());
         order.setShippingPhone(request.phone());
@@ -85,6 +105,7 @@ public class OrderService {
         order.setShippingCity(request.city());
         order.setShippingState(request.state());
         order.setShippingPostalCode(request.postalCode());
+        order.setAlternatePhone(request.alternatePhone());
         order.setPaymentMethod(request.paymentMethod() != null ? request.paymentMethod() : "Prepaid");
 
         int totalQty = 0;
@@ -165,6 +186,11 @@ public class OrderService {
         if (total.compareTo(BigDecimal.ZERO) < 0) total = BigDecimal.ZERO;
         order.setTotalAmount(total);
         
+        // Persist cost breakdown for emails and tracking
+        order.setSubtotalAmount(subtotal);
+        order.setShippingCost(shippingCost);
+        order.setCodFee(codFee);
+        
         if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
             order.setPaymentStatus(PaymentStatus.PENDING);
             order.setOrderStatus(OrderStatus.PAYMENT_SUCCESS);
@@ -191,6 +217,9 @@ public class OrderService {
         if ("COD".equalsIgnoreCase(saved.getPaymentMethod())) {
             cartService.clear(email);
         }
+
+        // Auto-save address if new
+        userService.autoSaveAddress(order.getUser(), request);
         
         return map(saved);
     }
@@ -258,16 +287,19 @@ public class OrderService {
             cartService.clear(order.getUser().getEmail());
         }
     }
-
+    
     @Transactional
     public void cancelOrder(String email, UUID orderId) {
         Order order = findOwnedOrder(email, orderId);
-        // Only allow cancellation of PENDING orders
-        if (order.getOrderStatus() != OrderStatus.PENDING) {
-            log.info("Ignoring cancel for order {} with status {}", orderId, order.getOrderStatus());
-            return;
-        }
         
+        // RESTRICTED CANCELLATION: Check config window
+        var config = storeConfigService.getConfig();
+        int windowHours = config.cancellationWindowHours() != null ? config.cancellationWindowHours() : 2;
+        Instant cutoff = order.getCreatedAt().plus(windowHours, ChronoUnit.HOURS);
+        if (Instant.now().isAfter(cutoff) && order.getOrderStatus() != OrderStatus.PENDING) {
+             throw new com.devinevibes.exception.BadRequestException("Cancellation window of " + windowHours + " hours has passed.");
+        }
+
         // Restore stock
         for (OrderItem item : order.getItems()) {
             productService.releaseStock(item.getProduct(), item.getQuantity());
@@ -276,9 +308,29 @@ public class OrderService {
         
         order.setOrderStatus(OrderStatus.CANCELLED);
         order.setPaymentStatus(PaymentStatus.FAILED);
-        order.setCancellationReason("User cancelled payment");
+        order.setCancellationReason("Request by customer");
+
+        // If it was already paid, initiate refund
+        if (order.getPaymentStatus() == PaymentStatus.SUCCESS && "Prepaid".equalsIgnoreCase(order.getPaymentMethod())) {
+            this.initiateRefund(order);
+        }
+        
         orderRepository.save(order);
         log.info("Order {} cancelled and stock restored by user {}", orderId, email);
+    }
+
+    private void initiateRefund(Order order) {
+        try {
+            com.razorpay.RazorpayClient client = new com.razorpay.RazorpayClient(razorpayKey, razorpaySecret);
+            com.razorpay.Refund refund = client.payments.refund(order.getRazorpayPaymentId());
+            order.setRefundId(refund.get("id"));
+            order.setRefundStatus(refund.get("status"));
+            order.setRefundedAt(Instant.now());
+            order.setOrderStatus(OrderStatus.REFUND_INITIATED);
+            log.info("Refund initiated for order {}: refund_id={}", order.getId(), order.getRefundId());
+        } catch (Exception e) {
+            log.error("Failed to initiate automated refund for order {}: {}", order.getId(), e.getMessage());
+        }
     }
 
     @Transactional
@@ -312,19 +364,22 @@ public class OrderService {
         )).toList();
 
         return new OrderResponse(
-                order.getId(), order.getTotalAmount(), order.getOrderStatus(),
+                order.getId(), order.getOrderNumber(), order.getTotalAmount(), order.getOrderStatus(),
                 order.getPaymentStatus(), order.getRazorpayOrderId(), order.getTrackingId(),
                 order.getPaymentMethod(), cName, cEmail, order.getCreatedAt(), mappedItems,
                 order.getShippingAddress(), order.getShippingCity(), order.getShippingState(),
                 order.getShippingPostalCode(), order.getShippingPhone(), 
-                order.getShippingFirstName(), order.getShippingLastName()
+                order.getShippingFirstName(), order.getShippingLastName(),
+                order.getSubtotalAmount(), order.getShippingCost(), order.getCodFee(), order.getCouponDiscount()
         );
     }
 
     @Scheduled(fixedRate = 300000)
     @Transactional
     public void autoCancelAbandonedOrders() {
-        Instant cutoff = Instant.now().minus(15, ChronoUnit.MINUTES);
+        var config = storeConfigService.getConfig();
+        int hours = config.cancellationWindowHours() != null ? config.cancellationWindowHours() : 2;
+        Instant cutoff = Instant.now().minus(hours, ChronoUnit.HOURS);
         List<Order> abandoned = orderRepository.findByOrderStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff);
         if (abandoned.isEmpty()) return;
         log.info("Watchdog: Found {} abandoned orders", abandoned.size());
