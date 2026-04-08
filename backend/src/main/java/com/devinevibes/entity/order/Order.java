@@ -34,16 +34,17 @@ public class Order {
     private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private OrderStatus orderStatus = OrderStatus.PENDING;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     private String razorpayOrderId;
     private String razorpayPaymentId;
 
+    private String shiprocketOrderId;
     private String shipmentId;
     private String trackingId;
     private String refundId;

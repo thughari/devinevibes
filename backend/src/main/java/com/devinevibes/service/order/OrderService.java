@@ -275,9 +275,10 @@ public class OrderService {
         order.setRazorpayPaymentId(razorpayPaymentId);
 
         var shipment = shiprocketClient.createShipment(order);
+        order.setShiprocketOrderId(shipment.shiprocketOrderId());
         order.setShipmentId(shipment.shipmentId());
         order.setTrackingId(shipment.trackingId());
-        log.info("Shipment created for order {}", order.getId());
+        log.info("Shipment created for order {} with SR-ID {}", order.getId(), order.getShiprocketOrderId());
 
         // Send confirmation email
         emailService.sendOrderConfirmation(order);
@@ -307,13 +308,23 @@ public class OrderService {
         }
         
         order.setOrderStatus(OrderStatus.CANCELLED);
-        order.setPaymentStatus(PaymentStatus.FAILED);
         order.setCancellationReason("Request by customer");
+
+        // Sync with Shiprocket if it was created
+        if (order.getShiprocketOrderId() != null) {
+            shiprocketClient.cancelOrder(order.getShiprocketOrderId());
+        }
 
         // If it was already paid, initiate refund
         if (order.getPaymentStatus() == PaymentStatus.SUCCESS && "Prepaid".equalsIgnoreCase(order.getPaymentMethod())) {
             this.initiateRefund(order);
+        } else {
+            // Standard cancellation email for COD or unpaid orders
+            emailService.sendCancellationEmail(order);
         }
+        
+        // Mark payment as failed AFTER the check
+        order.setPaymentStatus(PaymentStatus.FAILED);
         
         orderRepository.save(order);
         log.info("Order {} cancelled and stock restored by user {}", orderId, email);
@@ -328,6 +339,9 @@ public class OrderService {
             order.setRefundedAt(Instant.now());
             order.setOrderStatus(OrderStatus.REFUND_INITIATED);
             log.info("Refund initiated for order {}: refund_id={}", order.getId(), order.getRefundId());
+            
+            // Send Refund Confirmation Email
+            emailService.sendRefundConfirmation(order);
         } catch (Exception e) {
             log.error("Failed to initiate automated refund for order {}: {}", order.getId(), e.getMessage());
         }

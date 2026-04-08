@@ -261,6 +261,110 @@ public class EmailService {
     }
 
     @Async("notificationExecutor")
+    public void sendRefundConfirmation(com.devinevibes.entity.order.Order order) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
+            helper.setTo(order.getShippingEmail());
+            helper.setSubject("Refund Processed — Devine Vibes Order #" + order.getOrderNumber());
+
+            String htmlContent = """
+                <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Georgia', serif; color: #1e293b;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <div style="background-color: #0f172a; padding: 30px; text-align: center;">
+                            <img src="https://devinevibes.in/logo.jpeg" alt="Devine Vibes" style="height: 60px;">
+                        </div>
+                        <div style="padding: 40px; border-top: 4px solid #ef4444;">
+                            <h2 style="color: #64748b; text-transform: uppercase; letter-spacing: 2px; font-size: 14px; margin-bottom: 10px; text-align: center;">Transaction Update</h2>
+                            <h1 style="color: #0f172a; font-size: 28px; margin-top: 0; margin-bottom: 20px; font-weight: normal; text-align: center;">Refund Initiated</h1>
+                            
+                            <p style="font-size: 16px; line-height: 1.8; color: #475569; text-align: center;">Hi %s, your refund for order #%s has been successfully initiated.</p>
+                            
+                            <div style="margin: 30px 0; padding: 25px; background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 4px; text-align: center;">
+                                <div style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Refund Amount</div>
+                                <div style="font-size: 32px; color: #0f172a; font-weight: bold;">₹%s</div>
+                                <div style="font-size: 12px; color: #94a3b8; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px;">Refund Identifier (Razorpay)</div>
+                                <div style="font-size: 14px; color: #0f172a; font-family: monospace; margin-top: 5px;">%s</div>
+                            </div>
+                            
+                            <p style="font-size: 14px; line-height: 1.6; color: #64748b; text-align: center;">The funds should settle into your original payment source within 5–7 business days, depending on your bank's processing time.</p>
+                        </div>
+                        <div style="background-color: #f1f5f9; padding: 30px; text-align: center;">
+                            <p style="margin: 0; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Devine Vibes &bull; Quality Spiritually Inspired Goods</p>
+                        </div>
+                    </div>
+                </div>
+                """.formatted(
+                    order.getShippingFirstName(),
+                    order.getOrderNumber(),
+                    order.getTotalAmount().toString(),
+                    order.getRefundId() != null ? order.getRefundId() : "N/A"
+                );
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            log.info("Refund confirmation email sent to: {}", order.getShippingEmail());
+
+        } catch (Exception e) {
+            log.error("Failed to send refund email to {}", order.getShippingEmail(), e);
+        }
+    }
+
+    @Async("notificationExecutor")
+    public void sendCancellationEmail(com.devinevibes.entity.order.Order order) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
+            helper.setTo(order.getShippingEmail());
+            helper.setSubject("Order Cancelled — Devine Vibes #" + order.getOrderNumber());
+
+            String htmlContent = """
+                <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Georgia', serif; color: #1e293b;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <div style="background-color: #0f172a; padding: 30px; text-align: center;">
+                            <img src="https://devinevibes.in/logo.jpeg" alt="Devine Vibes" style="height: 60px;">
+                        </div>
+                        <div style="padding: 40px; border-top: 4px solid #ef4444;">
+                            <h2 style="color: #64748b; text-transform: uppercase; letter-spacing: 2px; font-size: 14px; margin-bottom: 10px; text-align: center;">Update: Order Voided</h2>
+                            <h1 style="color: #0f172a; font-size: 28px; margin-top: 0; margin-bottom: 20px; font-weight: normal; text-align: center;">Cancellation Confirmed</h1>
+                            
+                            <p style="font-size: 16px; line-height: 1.8; color: #475569; text-align: center;">Hi %s, your request to cancel order #%s has been successfully processed.</p>
+                            
+                            <div style="margin: 30px 0; padding: 25px; background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 4px; text-align: center;">
+                                <div style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Items Cancelled</div>
+                                <div style="font-size: 18px; color: #0f172a; font-weight: bold;">%d Item(s)</div>
+                                <div style="font-size: 12px; color: #94a3b8; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px;">Status</div>
+                                <div style="font-size: 14px; color: #ef4444; font-weight: bold; text-transform: uppercase; margin-top: 5px;">Voided</div>
+                            </div>
+                            
+                            <p style="font-size: 14px; line-height: 1.6; color: #64748b; text-align: center;">Since this was a %s order, no charges were captured or a refund is being processed back to your source if applicable.</p>
+                        </div>
+                        <div style="background-color: #f1f5f9; padding: 30px; text-align: center;">
+                            <p style="margin: 0; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Devine Vibes &bull; Quality Spiritually Inspired Goods</p>
+                        </div>
+                    </div>
+                </div>
+                """.formatted(
+                    order.getShippingFirstName(),
+                    order.getOrderNumber(),
+                    order.getItems().size(),
+                    order.getPaymentMethod()
+                );
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            log.info("Cancellation email sent to: {}", order.getShippingEmail());
+
+        } catch (Exception e) {
+            log.error("Failed to send cancellation email to {}", order.getShippingEmail(), e);
+        }
+    }
+
+    @Async("notificationExecutor")
     public void send(String to, String subject, String body) {
         log.info("Simple EMAIL to={} subject={} body={}", to, subject, body);
     }

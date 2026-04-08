@@ -17,26 +17,44 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
         <!-- Header -->
-        <div class="px-6 py-8 border-b border-gray-100 text-center bg-gray-50/50">
-          <div class="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
-            <mat-icon class="text-dv-green text-3xl">check_circle</mat-icon>
+        <div class="px-6 py-8 border-b border-gray-100 text-center" 
+             [class.bg-gray-50]="tracking()?.orderStatus !== 'CANCELLED' && tracking()?.orderStatus !== 'REFUND_INITIATED'"
+             [class.bg-red-50]="tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED'">
+          
+          <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 shadow-sm"
+               [class.bg-green-100]="tracking()?.orderStatus !== 'CANCELLED' && tracking()?.orderStatus !== 'REFUND_INITIATED'"
+               [class.bg-red-100]="tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED'">
+            @if (tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED') {
+              <mat-icon class="text-red-600 text-3xl">cancel</mat-icon>
+            } @else {
+              <mat-icon class="text-dv-green text-3xl">check_circle</mat-icon>
+            }
           </div>
-          <h1 class="text-3xl font-sans font-medium text-gray-900 mb-2">Order Confirmed</h1>
-          <p class="text-gray-500">Thank you for your purchase. Your sacred items are being prepared.</p>
-          <div class="mt-6 inline-block bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm ml-2">
-            <span class="text-sm text-gray-500 mr-2">Payment:</span>
-            <span class="font-mono text-gray-900 font-medium">{{ tracking()?.paymentMethod || 'Prepaid' }}</span>
-          </div>
-          <div class="mt-6 inline-block bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm ml-2">
-            <span class="text-sm text-gray-500 mr-2">Order:</span>
-            <span class="font-mono text-gray-900 font-bold">{{ tracking()?.orderNumber || orderId() }}</span>
-          </div>
-          @if (tracking()?.trackingId) {
-            <div class="mt-2 inline-block bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm ml-2">
-              <span class="text-sm text-gray-500 mr-2">AWB Tracking:</span>
-              <span class="font-mono text-gray-900 font-medium">{{ tracking()?.trackingId }}</span>
-            </div>
+
+          @if (tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED') {
+            <h1 class="text-3xl font-sans font-medium text-red-700 mb-2">Order Cancelled</h1>
+            <p class="text-red-500">This order has been cancelled. Any payments made will be processed back to your original source.</p>
+          } @else {
+            <h1 class="text-3xl font-sans font-medium text-gray-900 mb-2">Order Confirmed</h1>
+            <p class="text-gray-500">Thank you for your purchase. Your sacred items are being prepared.</p>
           }
+
+          <div class="mt-6 flex flex-wrap justify-center gap-2">
+            <div class="inline-block bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+              <span class="text-sm text-gray-500 mr-2">Payment:</span>
+              <span class="font-mono text-gray-900 font-medium">{{ tracking()?.paymentMethod || 'Prepaid' }}</span>
+            </div>
+            <div class="inline-block bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+              <span class="text-sm text-gray-500 mr-2">Order:</span>
+              <span class="font-mono text-gray-900 font-bold">{{ tracking()?.orderNumber || orderId() }}</span>
+            </div>
+            @if (tracking()?.trackingId) {
+              <div class="inline-block bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+                <span class="text-sm text-gray-500 mr-2">AWB:</span>
+                <span class="font-mono text-gray-900 font-medium">{{ tracking()?.trackingId }}</span>
+              </div>
+            }
+          </div>
         </div>
 
         <!-- Tracking Timeline -->
@@ -53,31 +71,47 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
           @if (loading()) {
             <p class="text-sm text-gray-400 text-center py-8">Loading tracking info...</p>
           } @else {
-            <div class="relative">
-              <!-- Vertical Line -->
-              <div class="absolute left-6 top-4 bottom-4 w-0.5 bg-gray-200"></div>
+            @if (tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED') {
+               <div class="bg-red-50/30 border border-red-100 rounded-xl p-8 text-center">
+                  <mat-icon class="text-red-400 text-4xl mb-2">info</mat-icon>
+                  <h3 class="text-lg font-medium text-red-900">Order Voided</h3>
+                  <p class="text-sm text-red-600 mt-1">This order is no longer in progress.</p>
+                  
+                  @if (tracking()?.orderStatus === 'REFUND_INITIATED') {
+                    <div class="mt-6 p-4 bg-white rounded-lg border border-red-100 inline-block text-left shadow-sm">
+                      <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Automated Refund Info</p>
+                      <p class="text-sm text-gray-700">A refund for <strong>{{ tracking()?.totalAmount | currency:'INR':'symbol':'1.0-0' }}</strong> has been initiated via Razorpay.</p>
+                      <p class="text-xs text-dv-green mt-2 font-mono">Status: Processing in Bank</p>
+                    </div>
+                  }
+               </div>
+            } @else {
+              <div class="relative">
+                <!-- Vertical Line -->
+                <div class="absolute left-6 top-4 bottom-4 w-0.5 bg-gray-200"></div>
 
-              <div class="space-y-8 relative">
-                @for (step of resolvedSteps(); track step.key; let i = $index) {
-                  <div class="flex items-start" [class.opacity-40]="!isStepReached(step.key)">
-                    <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center z-10 shadow-sm"
-                         [class.bg-dv-green]="isStepReached(step.key)"
-                         [class.bg-white]="!isStepReached(step.key)"
-                         [class.border-2]="!isStepReached(step.key)"
-                         [class.border-gray-200]="!isStepReached(step.key)">
-                      <mat-icon [class.text-white]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.icon }}</mat-icon>
+                <div class="space-y-8 relative">
+                  @for (step of resolvedSteps(); track step.key; let i = $index) {
+                    <div class="flex items-start" [class.opacity-40]="!isStepReached(step.key)">
+                      <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center z-10 shadow-sm"
+                           [class.bg-dv-green]="isStepReached(step.key)"
+                           [class.bg-white]="!isStepReached(step.key)"
+                           [class.border-2]="!isStepReached(step.key)"
+                           [class.border-gray-200]="!isStepReached(step.key)">
+                        <mat-icon [class.text-white]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.icon }}</mat-icon>
+                      </div>
+                      <div class="ml-6 pt-2">
+                        <h3 class="text-lg font-medium" [class.text-gray-900]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.label }}</h3>
+                        <p class="text-sm mt-1" [class.text-gray-500]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.description }}</p>
+                        @if (isCurrentStep(step.key)) {
+                          <span class="text-xs text-dv-green mt-2 block font-medium">● Current Status</span>
+                        }
+                      </div>
                     </div>
-                    <div class="ml-6 pt-2">
-                      <h3 class="text-lg font-medium" [class.text-gray-900]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.label }}</h3>
-                      <p class="text-sm mt-1" [class.text-gray-500]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.description }}</p>
-                      @if (isCurrentStep(step.key)) {
-                        <span class="text-xs text-dv-green mt-2 block font-medium">● Current Status</span>
-                      }
-                    </div>
-                  </div>
-                }
+                  }
+                </div>
               </div>
-            </div>
+            }
           }
         </div>
         
@@ -148,6 +182,23 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
           </a>
         </div>
       </div>
+
+      <!-- Cancel Confirmation Modal -->
+      @if (showCancelConfirm()) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div class="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl transform transition-all">
+            <div class="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mb-5 mx-auto">
+              <mat-icon class="text-red-500 w-8 h-8 text-[32px] flex items-center justify-center">warning_amber</mat-icon>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Cancel Order?</h3>
+            <p class="text-sm text-gray-500 text-center mb-6">Are you sure you want to cancel this order? This will restore item stock and initiate an automated refund if paid. This action is permanent.</p>
+            <div class="flex gap-3">
+              <button (click)="showCancelConfirm.set(false)" class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-medium transition-colors">Nevermind</button>
+              <button (click)="executeCancel()" class="flex-1 px-4 py-2.5 bg-red-600 text-white hover:bg-red-700 rounded-xl font-medium transition-colors shadow-md shadow-red-500/10">Yes, Cancel</button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -159,6 +210,7 @@ export class OrderTrackingComponent implements OnInit {
   orderId = signal<string>('');
   tracking = signal<OrderResponse | null>(null);
   loading = signal(true);
+  showCancelConfirm = signal(false);
 
   baseSteps = [
     { key: 'PENDING', icon: 'receipt_long', label: 'Order Placed', description: 'We have received your order.' },
@@ -222,19 +274,22 @@ export class OrderTrackingComponent implements OnInit {
   });
 
   cancelOrder() {
+    this.showCancelConfirm.set(true);
+  }
+
+  executeCancel() {
     const id = this.orderId();
     if (!id) return;
     
-    if (confirm('Are you sure you want to cancel this order? An automated refund will be initiated if payment was successful.')) {
-      this.api.post(`/orders/${id}/cancel`, {}).subscribe({
-        next: () => {
-          this.snackbar.showSuccess('Order cancelled successfully. Refund initiated.');
-          // Refresh order data
-          this.ngOnInit();
-        },
-        error: (err: any) => this.snackbar.showError(err?.error?.message || 'Failed to cancel order')
-      });
-    }
+    this.showCancelConfirm.set(false);
+    this.api.post(`/orders/${id}/cancel`, {}).subscribe({
+      next: () => {
+        this.snackbar.showSuccess('Order cancelled successfully. Refund initiated.');
+        // Refresh order data
+        this.ngOnInit();
+      },
+      error: (err: any) => this.snackbar.showError(err?.error?.message || 'Failed to cancel order')
+    });
   }
 }
 

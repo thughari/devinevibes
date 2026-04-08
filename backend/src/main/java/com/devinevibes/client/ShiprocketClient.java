@@ -14,9 +14,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class ShiprocketClient {
+
+    private final String baseUrl = "https://apiv2.shiprocket.in";
 
     private final String email;
     private final String password;
@@ -56,7 +60,7 @@ public class ShiprocketClient {
     public ShipmentResponse createShipment(Order order) {
         String token = getToken();
         if (token == null) {
-            return new ShipmentResponse("AUTH_FAILED", "PENDING_MANUAL_DISPATCH");
+            return new ShipmentResponse("ERROR", "AUTH_FAILED", "PENDING_MANUAL_DISPATCH");
         }
         String url = "https://apiv2.shiprocket.in/v1/external/orders/create/adhoc";
 
@@ -68,14 +72,15 @@ public class ShiprocketClient {
         for (OrderItem item : order.getItems()) {
             Map<String, Object> itemMap = new HashMap<>();
             itemMap.put("name", item.getProduct().getName());
-            itemMap.put("sku", item.getProduct().getId().toString().substring(0, 8));
+            String sku = item.getProduct().getProductCode() != null ? item.getProduct().getProductCode() : item.getProduct().getId().toString().substring(0, 8);
+            itemMap.put("sku", sku);
             itemMap.put("units", item.getQuantity());
             itemMap.put("selling_price", item.getUnitPrice());
             items.add(itemMap);
         }
 
         Map<String, Object> req = new HashMap<>();
-        req.put("order_id", order.getId().toString());
+        req.put("order_id", order.getOrderNumber());
         req.put("order_date", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
         req.put("pickup_location", "Home"); // Fix: Must exactly match Shiprocket dashboard location name
 
@@ -121,12 +126,14 @@ public class ShiprocketClient {
                 Map<String, Object> body = response.getBody();
                 System.out.println("SHIPROCKET SUCCESS RESPONSE: " + body);
                 
+                Object orderIdFromRes = body.get("order_id");
                 Object shipmentId = body.get("shipment_id");
                 Object awb = body.get("awb_code");
 
-                if (shipmentId == null && body.get("data") instanceof Map) {
+                if ((orderIdFromRes == null || shipmentId == null) && body.get("data") instanceof Map) {
                     Map<String, Object> dataMap = (Map<String, Object>) body.get("data");
-                    shipmentId = dataMap.get("shipment_id");
+                    orderIdFromRes = dataMap.get("order_id") != null ? dataMap.get("order_id") : orderIdFromRes;
+                    shipmentId = dataMap.get("shipment_id") != null ? dataMap.get("shipment_id") : shipmentId;
                     awb = dataMap.get("awb_code") != null ? dataMap.get("awb_code") : awb;
                 }
 
@@ -135,6 +142,7 @@ public class ShiprocketClient {
                 }
 
                 return new ShipmentResponse(
+                        orderIdFromRes != null ? orderIdFromRes.toString() : "N/A",
                         shipmentId.toString(),
                         awb != null ? awb.toString() : "PENDING_AWB");
             }
@@ -144,14 +152,35 @@ public class ShiprocketClient {
             System.err.println("Status: " + e.getStatusCode());
             System.err.println("Body: " + e.getResponseBodyAsString());
             e.printStackTrace();
-            return new ShipmentResponse("API_ERROR", "PENDING_MANUAL_DISPATCH");
+            return new ShipmentResponse("ERROR", "API_ERROR", "PENDING_MANUAL_DISPATCH");
         } catch (Exception e) {
             System.err.println("===== SHIPROCKET INTERNAL ERROR =====");
             e.printStackTrace();
-            return new ShipmentResponse("DUMMY_SHIPMENT", "DUMMY_TRACKING");
+            return new ShipmentResponse("ERROR", "DUMMY_SHIPMENT", "DUMMY_TRACKING");
         }
     }
 
-    public record ShipmentResponse(String shipmentId, String trackingId) {
+    public void cancelOrder(String shiprocketOrderId) {
+        if (shiprocketOrderId == null || "ERROR".equals(shiprocketOrderId)) return;
+        
+        try {
+            String token = getToken();
+            String url = baseUrl + "/v1/external/orders/cancel";
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(token);
+            
+            Map<String, Object> body = Map.of("ids", java.util.List.of(shiprocketOrderId));
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            
+            restTemplate.postForEntity(url, entity, String.class);
+            log.info("Shiprocket order cancelled success: {}", shiprocketOrderId);
+        } catch (Exception e) {
+            log.error("Failed to cancel Shiprocket order {}: {}", shiprocketOrderId, e.getMessage());
+        }
+    }
+
+    public record ShipmentResponse(String shiprocketOrderId, String shipmentId, String trackingId) {
     }
 }
