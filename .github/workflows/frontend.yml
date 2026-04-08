@@ -32,6 +32,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Create 404.html for SPA routing
+        run: cp dist/app/browser/index.html dist/app/browser/404.html
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v4
         with:
