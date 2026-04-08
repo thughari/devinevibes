@@ -77,6 +77,27 @@ declare var Razorpay: any;
               }
 
               <div class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
+                <!-- Delivering to someone else? -->
+                <div class="sm:col-span-2 p-4 bg-brand-gray/50 rounded-xl border border-gray-100">
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" [checked]="isOrderingForSomeoneElse()" (change)="isOrderingForSomeoneElse.set(!isOrderingForSomeoneElse())" class="w-5 h-5 text-brand-green rounded-md focus:ring-brand-green/20 border-gray-300">
+                    <span class="text-sm font-bold text-brand-dark">Delivering to someone else / Gift?</span>
+                  </label>
+                  
+                  @if (isOrderingForSomeoneElse()) {
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div class="sm:col-span-1">
+                        <label for="recipientName" class="block text-[10px] font-bold text-brand-text uppercase tracking-wider mb-1">Recipient Name</label>
+                        <input type="text" id="recipientName" formControlName="recipientName" placeholder="Full name of recipient" class="block w-full rounded-md border-gray-200 bg-white text-brand-dark shadow-sm focus:border-brand-green focus:ring-brand-green sm:text-sm p-2.5 border">
+                      </div>
+                      <div class="sm:col-span-1">
+                        <label for="recipientPhone" class="block text-[10px] font-bold text-brand-text uppercase tracking-wider mb-1">Recipient Mobile</label>
+                        <input type="tel" id="recipientPhone" formControlName="recipientPhone" placeholder="Recipient's 10-digit mobile" class="block w-full rounded-md border-gray-200 bg-white text-brand-dark shadow-sm focus:border-brand-green focus:ring-brand-green sm:text-sm p-2.5 border">
+                      </div>
+                    </div>
+                  }
+                </div>
+
                 <div>
                   <label for="firstName" class="block text-sm font-medium text-brand-dark">First name</label>
                   <div class="mt-1">
@@ -282,6 +303,8 @@ export class CheckoutComponent implements OnInit {
   activeCoupons = signal<any[]>([]);
   selectedAddressId = signal<string | null>(null);
   paymentType = signal('Prepaid');
+  isOrderingForSomeoneElse = signal(false);
+  
   couponCode = this.fb.control('');
   couponDiscount = signal(0);
   appliedCouponData = signal<ApplyCouponResponse | null>(null);
@@ -360,6 +383,8 @@ export class CheckoutComponent implements OnInit {
     phone: ['', [Validators.required]],
     firstName: ['', Validators.required],
     lastName: ['', Validators.required],
+    recipientName: [''],
+    recipientPhone: [''],
     address: ['', Validators.required],
     city: ['', Validators.required],
     state: ['', Validators.required],
@@ -435,12 +460,18 @@ export class CheckoutComponent implements OnInit {
       this.isPaymentSuccessful = false; // Reset for a new attempt
       const isCod = this.paymentType() === 'COD';
       
-      const req = {
+      const req: any = {
         ...this.checkoutForm.value,
         paymentMethod: isCod ? 'COD' : 'Prepaid',
         couponCode: this.couponCode.value?.trim() || null,
         alternatePhone: this.checkoutForm.value.alternatePhone || null
       };
+
+      // Ensure recipient fields are null if not ordering for someone else
+      if (!this.isOrderingForSomeoneElse()) {
+        req.recipientName = null;
+        req.recipientPhone = null;
+      }
 
       // Stage 1: Lock Order in the DB
       this.api.post<any>('/orders', req).subscribe({

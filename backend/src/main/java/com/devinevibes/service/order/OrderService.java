@@ -82,7 +82,15 @@ public class OrderService {
         if (cartItems.isEmpty()) throw new IllegalArgumentException("Cart is empty");
 
         Order order = new Order();
-        order.setUser(userService.getByEmail(email));
+        var user = userService.getByEmail(email);
+        order.setUser(user);
+        
+        // AUTO-SAVE Phone to Profile if missing
+        if (user.getPhone() == null || user.getPhone().isBlank()) {
+            user.setPhone(request.phone());
+            // Implicit save happens at end of transaction
+            log.info("Auto-saved phone {} to user profile {}", request.phone(), email);
+        }
         
         // Generate Order Number: DV-YYMMDD-XXXX
         String datePart = java.time.format.DateTimeFormatter.ofPattern("yyMMdd")
@@ -96,11 +104,34 @@ public class OrderService {
         String orderNumber = String.format("DV-%s-%04d", datePart, counter != null ? counter : 1);
         order.setOrderNumber(orderNumber);
         
-        // Save shipping context
+        // Save shipping context (Buyer vs Recipient logic)
         order.setShippingEmail(request.email());
-        order.setShippingPhone(request.phone());
-        order.setShippingFirstName(request.firstName());
-        order.setShippingLastName(request.lastName());
+        
+        // Logic: Use recipient info if order is for someone else, otherwise buyer info
+        String finalRecipientFirstName = request.firstName();
+        String finalRecipientLastName = request.lastName();
+        String finalRecipientPhone = request.phone();
+
+        if (request.recipientName() != null && !request.recipientName().isBlank()) {
+            String fullName = request.recipientName().trim();
+            if (fullName.contains(" ")) {
+                int lastSpace = fullName.lastIndexOf(" ");
+                finalRecipientFirstName = fullName.substring(0, lastSpace);
+                finalRecipientLastName = fullName.substring(lastSpace + 1);
+            } else {
+                finalRecipientFirstName = fullName;
+                finalRecipientLastName = "";
+            }
+        }
+
+        if (request.recipientPhone() != null && !request.recipientPhone().isBlank()) {
+            finalRecipientPhone = request.recipientPhone();
+        }
+
+        order.setShippingFirstName(finalRecipientFirstName);
+        order.setShippingLastName(finalRecipientLastName);
+        order.setShippingPhone(finalRecipientPhone);
+        
         order.setShippingAddress(request.address());
         order.setShippingCity(request.city());
         order.setShippingState(request.state());
@@ -201,6 +232,7 @@ public class OrderService {
 
         if ("COD".equalsIgnoreCase(saved.getPaymentMethod())) {
             var shipment = shiprocketClient.createShipment(saved);
+            saved.setShiprocketOrderId(shipment.shiprocketOrderId());
             saved.setShipmentId(shipment.shipmentId());
             saved.setTrackingId(shipment.trackingId());
             saved = orderRepository.save(saved);
