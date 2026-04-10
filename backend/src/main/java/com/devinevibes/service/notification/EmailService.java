@@ -83,7 +83,7 @@ public class EmailService {
 
             helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
             helper.setTo(order.getShippingEmail());
-            helper.setSubject("Your Devine Vibes Order Confirmation — " + order.getOrderNumber());
+            helper.setSubject("Your Devine Vibes Order Confirmation — " + order.getId());
 
             StringBuilder itemsHtml = new StringBuilder();
             for (com.devinevibes.entity.order.OrderItem item : order.getItems()) {
@@ -169,7 +169,7 @@ public class EmailService {
                 </div>
                 """.formatted(
                     order.getShippingFirstName(), 
-                    order.getOrderNumber(),
+                    order.getId(),
                     java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy").withZone(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.Instant.now()),
                     itemsHtml.toString(), 
                     costBreakdown.toString(),
@@ -243,12 +243,11 @@ public class EmailService {
                     </div>
                 </div>
                 """.formatted(
-                    title,
                     subTitle,
                     order.getShippingFirstName(), 
-                    order.getId().toString().substring(0, 8).toUpperCase(),
+                    order.getId().substring(0, Math.min(order.getId().length(), 8)).toUpperCase(),
                     trackingBlock,
-                    order.getId().toString()
+                    order.getId()
                 );
 
             helper.setText(htmlContent, true);
@@ -268,7 +267,7 @@ public class EmailService {
 
             helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
             helper.setTo(order.getShippingEmail());
-            helper.setSubject("Refund Processed — Devine Vibes Order #" + order.getOrderNumber());
+            helper.setSubject("Refund Processed — Devine Vibes Order #" + order.getId());
 
             String htmlContent = """
                 <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Georgia', serif; color: #1e293b;">
@@ -298,7 +297,7 @@ public class EmailService {
                 </div>
                 """.formatted(
                     order.getShippingFirstName(),
-                    order.getOrderNumber(),
+                    order.getId(),
                     order.getTotalAmount().toString(),
                     order.getRefundId() != null ? order.getRefundId() : "N/A"
                 );
@@ -320,7 +319,7 @@ public class EmailService {
 
             helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
             helper.setTo(order.getShippingEmail());
-            helper.setSubject("Order Cancelled — Devine Vibes #" + order.getOrderNumber());
+            helper.setSubject("Order Cancelled — Devine Vibes #" + order.getId());
 
             String htmlContent = """
                 <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Georgia', serif; color: #1e293b;">
@@ -350,7 +349,7 @@ public class EmailService {
                 </div>
                 """.formatted(
                     order.getShippingFirstName(),
-                    order.getOrderNumber(),
+                    order.getId(),
                     order.getItems().size(),
                     order.getPaymentMethod()
                 );

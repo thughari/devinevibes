@@ -17,8 +17,7 @@ import java.util.UUID;
 public class Product {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
     @Column(unique = true)
     private String productCode;
@@ -52,6 +51,9 @@ public class Product {
     @CollectionTable(name = "product_videos", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "url")
     private java.util.Set<String> videoUrls = new java.util.LinkedHashSet<>();
+
+    @Column(columnDefinition = "bigint default 0")
+    private Long salesCount = 0L;
 
     private Instant createdAt = Instant.now();
 

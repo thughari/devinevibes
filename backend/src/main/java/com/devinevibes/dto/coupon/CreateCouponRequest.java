@@ -4,7 +4,6 @@ import com.devinevibes.entity.coupon.CouponType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.UUID;
 
 public record CreateCouponRequest(
         String code,
@@ -13,7 +12,7 @@ public record CreateCouponRequest(
         BigDecimal minimumCartValue,
         Integer buyQty,
         Integer getQty,
-        UUID productId,
+        String productId,
         Boolean active,
         Instant expiresAt,
         Integer maxUses,

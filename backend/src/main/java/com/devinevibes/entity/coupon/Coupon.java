@@ -14,8 +14,7 @@ import java.util.UUID;
 @Setter
 public class Coupon {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
     @Column(nullable = false, unique = true)
     private String code;
@@ -28,7 +27,7 @@ public class Coupon {
     private BigDecimal minimumCartValue;
     private Integer buyQty;
     private Integer getQty;
-    private UUID productId;
+    private String productId;
     private boolean active = true;
     private Instant expiresAt;
     private Integer maxUses;

@@ -5,8 +5,6 @@ import com.devinevibes.service.payment.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
@@ -18,7 +16,7 @@ public class PaymentController {
     }
 
     @PostMapping("/orders/{orderId}")
-    public ResponseEntity<CreatePaymentOrderResponse> createOrder(@PathVariable UUID orderId) {
+    public ResponseEntity<CreatePaymentOrderResponse> createOrder(@PathVariable String orderId) {
         return ResponseEntity.ok(paymentService.createRazorpayOrder(orderId));
     }
 }

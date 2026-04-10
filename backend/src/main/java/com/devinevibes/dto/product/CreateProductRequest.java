@@ -1,7 +1,6 @@
 package com.devinevibes.dto.product;
 
 import jakarta.validation.constraints.*;
-
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -14,7 +13,7 @@ public record CreateProductRequest(
         String imageUrl,
         List<String> imageUrls,
         List<String> videoUrls,
-        java.util.UUID categoryId,
+        String categoryId,
         java.math.BigDecimal weight,
         java.math.BigDecimal length,
         java.math.BigDecimal breadth,

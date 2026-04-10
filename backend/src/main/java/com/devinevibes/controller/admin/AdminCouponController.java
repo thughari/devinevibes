@@ -8,7 +8,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin/coupons")
@@ -27,7 +26,7 @@ public class AdminCouponController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CouponResponse> update(@PathVariable UUID id, @RequestBody CreateCouponRequest request) {
+    public ResponseEntity<CouponResponse> update(@PathVariable String id, @RequestBody CreateCouponRequest request) {
         return ResponseEntity.ok(couponService.update(id, request));
     }
 
@@ -37,7 +36,7 @@ public class AdminCouponController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable String id) {
         couponService.delete(id);
         return ResponseEntity.noContent().build();
     }

@@ -8,8 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/admin/products")
 @PreAuthorize("hasRole('ADMIN')")
@@ -27,12 +25,12 @@ public class AdminProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponse> update(@PathVariable UUID id, @Valid @RequestBody CreateProductRequest request) {
+    public ResponseEntity<ProductResponse> update(@PathVariable String id, @Valid @RequestBody CreateProductRequest request) {
         return ResponseEntity.ok(productService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable String id) {
         productService.delete(id);
         return ResponseEntity.noContent().build();
     }

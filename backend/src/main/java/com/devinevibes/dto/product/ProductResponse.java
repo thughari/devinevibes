@@ -3,10 +3,9 @@ package com.devinevibes.dto.product;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 
 public record ProductResponse(
-        UUID id,
+        String id,
         String productCode,
         String name,
         String description,
@@ -21,5 +20,7 @@ public record ProductResponse(
         BigDecimal weight,
         BigDecimal length,
         BigDecimal breadth,
-        BigDecimal height
+        BigDecimal height,
+        java.time.Instant createdAt,
+        Long salesCount
 ) implements Serializable {}

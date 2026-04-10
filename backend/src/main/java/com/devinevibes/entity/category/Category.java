@@ -17,8 +17,7 @@ import java.util.UUID;
 public class Category implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
     @Column(nullable = false, unique = true)
     private String name;

@@ -72,7 +72,7 @@ public class ShiprocketClient {
         for (OrderItem item : order.getItems()) {
             Map<String, Object> itemMap = new HashMap<>();
             itemMap.put("name", item.getProduct().getName());
-            String sku = item.getProduct().getProductCode() != null ? item.getProduct().getProductCode() : item.getProduct().getId().toString().substring(0, 8);
+            String sku = item.getProduct().getId().toString();
             itemMap.put("sku", sku);
             itemMap.put("units", item.getQuantity());
             itemMap.put("selling_price", item.getUnitPrice());
@@ -80,7 +80,7 @@ public class ShiprocketClient {
         }
 
         Map<String, Object> req = new HashMap<>();
-        req.put("order_id", order.getOrderNumber());
+        req.put("order_id", order.getId());
         req.put("order_date", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
         req.put("pickup_location", "Home"); // Fix: Must exactly match Shiprocket dashboard location name
 

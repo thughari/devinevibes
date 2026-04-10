@@ -11,17 +11,16 @@ import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-public interface ProductRepository extends JpaRepository<Product, UUID> {
+public interface ProductRepository extends JpaRepository<Product, String> {
     
     @EntityGraph(attributePaths = {"imageUrls", "videoUrls"})
     List<Product> findAll();
 
     @EntityGraph(attributePaths = {"imageUrls", "videoUrls"})
-    Optional<Product> findById(UUID id);
+    Optional<Product> findById(String id);
     
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :id")
-    Optional<Product> findByIdWithLock(@Param("id") UUID id);
+    Optional<Product> findByIdWithLock(@Param("id") String id);
 }

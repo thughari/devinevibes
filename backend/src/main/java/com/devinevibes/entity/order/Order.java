@@ -18,11 +18,7 @@ import java.util.UUID;
 public class Order {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-
-    @Column(unique = true)
-    private String orderNumber;
+    private String id;
 
     @ManyToOne(optional = false)
     private User user;

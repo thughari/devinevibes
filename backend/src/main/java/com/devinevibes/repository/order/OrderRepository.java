@@ -12,16 +12,16 @@ import java.util.UUID;
 import com.devinevibes.entity.order.OrderStatus;
 import java.time.Instant;
 
-public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
+public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecificationExecutor<Order> {
     
     @EntityGraph(attributePaths = {"items", "user"})
     List<Order> findByUser(User user);
 
     @EntityGraph(attributePaths = {"items", "user"})
-    Optional<Order> findById(UUID id);
+    Optional<Order> findById(String id);
 
     @EntityGraph(attributePaths = {"items", "user"})
     Optional<Order> findByRazorpayOrderId(String razorpayOrderId);
 
-    List<Order> findByOrderStatusAndCreatedAtBefore(OrderStatus status, Instant before);
+    List<Order> findByOrderStatusAndCreatedAtBefore(OrderStatus status, Instant cutoff);
 }

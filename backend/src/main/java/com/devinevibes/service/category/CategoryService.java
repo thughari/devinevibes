@@ -26,7 +26,7 @@ public class CategoryService {
                 .toList();
     }
 
-    public Category getCategoryById(UUID id) {
+    public Category getCategoryById(String id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
     }
@@ -37,12 +37,14 @@ public class CategoryService {
         if (category.getSlug() == null || category.getSlug().isBlank()) {
             category.setSlug(category.getName().toLowerCase().replaceAll("[^a-z0-9]", "-"));
         }
+        // Generate Meaningful ID: CAT-SLUG
+        category.setId("CAT-" + category.getSlug().toUpperCase());
         return categoryRepository.save(category);
     }
 
     @Transactional
     @org.springframework.cache.annotation.CacheEvict(value = "categories", allEntries = true)
-    public Category updateCategory(UUID id, Category details) {
+    public Category updateCategory(String id, Category details) {
         Category category = getCategoryById(id);
         category.setName(details.getName());
         category.setDescription(details.getDescription());
@@ -60,7 +62,7 @@ public class CategoryService {
 
     @Transactional
     @org.springframework.cache.annotation.CacheEvict(value = "categories", allEntries = true)
-    public void deleteCategory(UUID id) {
+    public void deleteCategory(String id) {
         categoryRepository.deleteById(id);
     }
 }

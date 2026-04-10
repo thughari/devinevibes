@@ -1,7 +1,7 @@
 package com.devinevibes.dto.admin;
 
 public record TopSellingProductResponse(
-        java.util.UUID productId,
+        String productId,
         String productName,
         String imageUrl,
         long totalQuantitySold,

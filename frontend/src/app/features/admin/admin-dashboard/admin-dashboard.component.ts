@@ -1,4 +1,4 @@
-import { Component, inject, signal, afterNextRender } from '@angular/core';
+import { Component, inject, signal, afterNextRender, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, TitleCasePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
@@ -272,17 +272,52 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
                 </div>
               </div>
             } @else {
-              <div class="flex items-center justify-center py-20 text-gray-400">
+                      <div class="flex items-center justify-center py-20 text-gray-400">
                 <mat-icon class="animate-spin mr-2">refresh</mat-icon> Loading analytics...
               </div>
             }
           </div>
         } @else if (activeTab() === 'products') {
+          <div class="p-4 bg-gray-50/50 border-b border-gray-100 flex flex-col md:flex-row gap-4">
+            <div class="relative flex-1">
+              <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 scale-90">search</mat-icon>
+              <input 
+                type="text" 
+                [value]="productSearch()"
+                (input)="productSearch.set($any($event.target).value)"
+                placeholder="Search by name or code..." 
+                class="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-dv-green/20 focus:border-dv-green outline-none transition-all"
+              />
+            </div>
+            <select 
+              [value]="productCategoryFilter() || 'ALL'"
+              (change)="productCategoryFilter.set($any($event.target).value)"
+              class="md:w-48 pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-dv-green/20 focus:border-dv-green outline-none transition-all bg-white"
+            >
+              <option value="ALL">All Categories</option>
+              @for (cat of categories(); track cat.id) {
+                <option [value]="cat.id">{{ cat.name }}</option>
+              }
+            </select>
+            <select 
+              [value]="productSortBy()"
+              (change)="productSortBy.set($any($event.target).value)"
+              class="md:w-48 pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-dv-green/20 focus:border-dv-green outline-none transition-all bg-white"
+            >
+              <option value="newest">Newest First</option>
+              <option value="name">Name (A-Z)</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="stock_asc">Stock: Low to High</option>
+              <option value="stock_desc">Stock: High to Low</option>
+            </select>
+          </div>
+
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-100">
               <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs">Product</th><th class="px-6 py-3 text-left text-xs">Price</th><th class="px-6 py-3 text-left text-xs">Stock</th><th class="px-6 py-3 text-right text-xs">Actions</th></tr></thead>
               <tbody class="divide-y divide-gray-100">
-                @for (p of products(); track p.id) {
+                @for (p of filteredProducts(); track p.id) {
                   <tr>
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-3">
@@ -298,6 +333,14 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
                     <td class="px-6 py-4 text-right text-sm flex justify-end gap-2">
                       <button (click)="editProduct(p)" class="text-blue-600 hover:text-blue-800">Edit</button>
                       <button (click)="confirmDelete('product', p.id, p.name)" class="text-red-500 hover:text-red-700">Delete</button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="px-6 py-12 text-center text-gray-400">
+                      <mat-icon class="text-4xl mb-2 opacity-20">search_off</mat-icon>
+                      <p>No products match your filters</p>
+                      <button (click)="productSearch.set(''); productCategoryFilter.set('ALL')" class="text-dv-green text-sm mt-2 font-medium hover:underline">Clear all filters</button>
                     </td>
                   </tr>
                 }
@@ -1022,6 +1065,51 @@ export class AdminDashboardComponent {
   ordersCurrentPage = signal<number>(0);
   coupons = signal<CouponResponse[]>([]);
   analytics = signal<AnalyticsResponse | null>(null);
+
+  productSearch = signal<string>('');
+  productCategoryFilter = signal<string | null>(null);
+  productSortBy = signal<string>('newest');
+
+  filteredProducts = computed(() => {
+    let list = [...this.products()];
+
+    // Filter by search
+    const search = this.productSearch().toLowerCase().trim();
+    if (search) {
+      list = list.filter(p => 
+        (p.name?.toLowerCase() || '').includes(search) || 
+        (p.productCode?.toLowerCase() || '').includes(search)
+      );
+    }
+
+    // Filter by category
+    const cat = this.productCategoryFilter();
+    if (cat && cat !== 'ALL') {
+      list = list.filter(p => p.categoryId === cat);
+    }
+
+    // Sort
+    const sort = this.productSortBy();
+    list.sort((a, b) => {
+      switch (sort) {
+        case 'price_asc': return a.price - b.price;
+        case 'price_desc': return b.price - a.price;
+        case 'stock_asc': return a.stock - b.stock;
+        case 'stock_desc': return b.stock - a.stock;
+        case 'name': return a.name.localeCompare(b.name);
+        case 'newest':
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        case 'popularity':
+          return (b.salesCount || 0) - (a.salesCount || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return list;
+  });
 
   readonly statusOptions = [
     { value: 'ALL', label: 'All Statuses' },

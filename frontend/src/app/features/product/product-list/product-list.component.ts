@@ -26,6 +26,7 @@ import { FormsModule } from '@angular/forms';
           </h1>
           <p class="text-brand-text">Discover our sacred and authentic spiritual items.</p>
         </div>
+      </div>
         
       <!-- Search and Filter Bar -->
       <div class="flex flex-col lg:flex-row gap-6 mb-12">
@@ -99,10 +100,10 @@ import { FormsModule } from '@angular/forms';
 
               @if (isSortDropdownOpen()) {
                 <div class="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden z-20">
-                  <button (click)="selectSort('featured')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'featured' ? 'text-dv-green font-bold' : '' }}">Featured</button>
-                  <button (click)="selectSort('price_asc')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'price_asc' ? 'text-dv-green font-bold' : '' }}">Low to High</button>
-                  <button (click)="selectSort('price_desc')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'price_desc' ? 'text-dv-green font-bold' : '' }}">High to Low</button>
+                  <button (click)="selectSort('popularity')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'popularity' ? 'text-dv-green font-bold' : '' }}">Popularity</button>
                   <button (click)="selectSort('newest')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'newest' ? 'text-dv-green font-bold' : '' }}">Newest Arrivals</button>
+                  <button (click)="selectSort('price_asc')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'price_asc' ? 'text-dv-green font-bold' : '' }}">Price: Low to High</button>
+                  <button (click)="selectSort('price_desc')" class="w-full text-left px-5 py-3 text-sm hover:bg-gray-50 {{ sortBy() === 'price_desc' ? 'text-dv-green font-bold' : '' }}">Price: High to Low</button>
                 </div>
               }
             </div>
@@ -148,7 +149,7 @@ export class ProductListComponent implements OnInit {
   isLoading = signal(true);
   category = signal<string | null>(null);
   selectedCategoryId = signal<string | null>(null);
-  sortBy = signal<'featured' | 'price_asc' | 'price_desc' | 'newest'>('featured');
+  sortBy = signal<'popularity' | 'price_asc' | 'price_desc' | 'newest'>('popularity');
 
   // Filter state
   searchQuery = '';
@@ -178,9 +179,9 @@ export class ProductListComponent implements OnInit {
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
       filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(q) || 
-        p.description.toLowerCase().includes(q) ||
-        p.productCode.toLowerCase().includes(q)
+        (p.name?.toLowerCase() || '').includes(q) || 
+        (p.description?.toLowerCase() || '').includes(q) ||
+        (p.productCode?.toLowerCase() || '').includes(q)
       );
     }
 
@@ -214,18 +215,25 @@ export class ProductListComponent implements OnInit {
     this.onFilterChange();
   }
 
-  sortFilteredProducts(value: 'featured' | 'price_asc' | 'price_desc' | 'newest') {
+  sortFilteredProducts(value: 'popularity' | 'price_asc' | 'price_desc' | 'newest') {
     const sorted = [...this.filteredProducts()];
     switch (value) {
+      case 'popularity': sorted.sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0)); break;
       case 'price_asc': sorted.sort((a, b) => Number(a.price) - Number(b.price)); break;
       case 'price_desc': sorted.sort((a, b) => Number(b.price) - Number(a.price)); break;
-      case 'newest': sorted.sort((a, b) => (a.id < b.id ? 1 : -1)); break;
+      case 'newest': 
+        sorted.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
       default: break;
     }
     this.filteredProducts.set(sorted);
   }
 
-  sortProducts(value: 'featured' | 'price_asc' | 'price_desc' | 'newest') {
+  sortProducts(value: 'popularity' | 'price_asc' | 'price_desc' | 'newest') {
     const sorted = [...this.products()];
     switch (value) {
       case 'price_asc':
@@ -235,12 +243,15 @@ export class ProductListComponent implements OnInit {
         sorted.sort((a, b) => Number(b.price) - Number(a.price));
         break;
       case 'newest':
-        // If no created date exists, fall back to current order (or reverse by UUID maybe)
-        sorted.sort((a, b) => (a.id.toString() < b.id.toString() ? 1 : -1));
+        sorted.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
         break;
-      case 'featured':
+      case 'popularity':
       default:
-        // original order from API
+        sorted.sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0));
         break;
     }
     this.products.set(sorted);
@@ -272,15 +283,15 @@ export class ProductListComponent implements OnInit {
 
   getSortLabel(): string {
     const map = {
-      'featured': 'Featured',
-      'price_asc': 'Low to High',
-      'price_desc': 'High to Low',
+      'popularity': 'Popularity',
+      'price_asc': 'Price: Low to High',
+      'price_desc': 'Price: High to Low',
       'newest': 'Newest Arrivals'
     };
     return map[this.sortBy()];
   }
 
-  selectSort(value: 'featured' | 'price_asc' | 'price_desc' | 'newest') {
+  selectSort(value: 'popularity' | 'price_asc' | 'price_desc' | 'newest') {
     this.sortBy.set(value);
     this.sortFilteredProducts(value);
     this.isSortDropdownOpen.set(false);

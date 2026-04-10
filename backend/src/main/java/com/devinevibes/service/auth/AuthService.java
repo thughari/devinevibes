@@ -95,6 +95,7 @@ public class AuthService {
                 newUser.setEmail(request.phone() + "@otp.local");
             }
             newUser.setName(normalizeName(request.name(), request.phone(), request.email()));
+            newUser.setId(generateUserId());
             return userRepository.save(newUser);
         });
         if (request.name() != null && !request.name().isBlank()) {
@@ -135,6 +136,7 @@ public class AuthService {
             user.setName(name);
             user.setProfileImageUrl(imageUrl);
             user.setProvider(AuthProvider.GOOGLE);
+            user.setId(generateUserId());
             return userRepository.save(user);
         });
     }
@@ -175,5 +177,10 @@ public class AuthService {
         if (email != null && !email.isBlank()) return email.split("@")[0];
         if (phone != null && phone.length() >= 4) return "User" + phone.substring(phone.length() - 4);
         return "User";
+    }
+
+    private String generateUserId() {
+        String random = java.util.UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        return "U-" + random;
     }
 }

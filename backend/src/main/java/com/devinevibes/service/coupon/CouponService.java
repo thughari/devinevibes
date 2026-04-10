@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class CouponService {
@@ -38,7 +37,7 @@ public class CouponService {
         return map(couponRepository.save(coupon));
     }
 
-    public CouponResponse update(UUID id, CreateCouponRequest request) {
+    public CouponResponse update(String id, CreateCouponRequest request) {
         Coupon coupon = couponRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Coupon not found"));
         coupon.setCode(request.code().trim().toUpperCase());
@@ -69,7 +68,7 @@ public class CouponService {
                 .toList();
     }
 
-    public void delete(UUID id) {
+    public void delete(String id) {
         couponRepository.deleteById(id);
     }
 
@@ -122,7 +121,7 @@ public class CouponService {
             
             // If specific product coupon and not enough for even one set but has at least buyQty
             if (coupon.getProductId() != null && qty < requiredForOneSet && qty >= coupon.getBuyQty()) {
-                productIdToAdd = coupon.getProductId().toString();
+                productIdToAdd = coupon.getProductId();
                 quantityToAdd = requiredForOneSet - qty;
                 message = "Adding fee items to satisfy Buy One Get One!";
             } else if (coupon.getBuyQty() == null || coupon.getGetQty() == null || qty < coupon.getBuyQty()) {
@@ -134,7 +133,7 @@ public class CouponService {
                 message = "Buy " + coupon.getBuyQty() + " Get " + coupon.getGetQty() + " FREE applied";
                 
                 if (freeItems > 0 && coupon.getProductId() != null) {
-                    targetProductId = coupon.getProductId().toString();
+                    targetProductId = coupon.getProductId();
                     freeQuantity = freeItems;
                 }
             }

@@ -102,7 +102,7 @@ public class OrderService {
             redisTemplate.expire(redisKey, java.time.Duration.ofDays(2));
         }
         String orderNumber = String.format("DV-%s-%04d", datePart, counter != null ? counter : 1);
-        order.setOrderNumber(orderNumber);
+        order.setId(orderNumber);
         
         // Save shipping context (Buyer vs Recipient logic)
         order.setShippingEmail(request.email());
@@ -238,6 +238,11 @@ public class OrderService {
             saved = orderRepository.save(saved);
             
             emailService.sendOrderConfirmation(saved);
+            
+            // Increment sales count for COD
+            for (OrderItem item : saved.getItems()) {
+                productService.incrementSalesCount(item.getProduct(), item.getQuantity());
+            }
         }
         
         if (saved.getAppliedCoupon() != null) {
@@ -289,11 +294,11 @@ public class OrderService {
         return PageResponse.from(page, page.getContent().stream().map(this::map).toList());
     }
 
-    public OrderResponse getMyOrderById(String email, UUID orderId) {
+    public OrderResponse getMyOrderById(String email, String orderId) {
         return map(findOwnedOrder(email, orderId));
     }
 
-    public TrackingResponse getTracking(String email, UUID orderId) {
+    public TrackingResponse getTracking(String email, String orderId) {
         Order order = findOwnedOrder(email, orderId);
         return new TrackingResponse(order.getTrackingId(), order.getOrderStatus());
     }
@@ -315,6 +320,11 @@ public class OrderService {
         // Send confirmation email
         emailService.sendOrderConfirmation(order);
         
+        // Increment sales count for Prepaid success
+        for (OrderItem item : order.getItems()) {
+            productService.incrementSalesCount(item.getProduct(), item.getQuantity());
+        }
+        
         // CLEAR CART ONLY NOW for prepaid success
         if (order.getUser() != null) {
             cartService.clear(order.getUser().getEmail());
@@ -322,7 +332,7 @@ public class OrderService {
     }
     
     @Transactional
-    public void cancelOrder(String email, UUID orderId) {
+    public void cancelOrder(String email, String orderId) {
         Order order = findOwnedOrder(email, orderId);
         
         // RESTRICTED CANCELLATION: Check config window
@@ -390,7 +400,7 @@ public class OrderService {
         emailService.sendOrderUpdate(order, status);
     }
 
-    public Order findOwnedOrder(String email, UUID orderId) {
+    public Order findOwnedOrder(String email, String orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException("Order not found"));
         if (!order.getUser().getEmail().equalsIgnoreCase(email)) throw new IllegalArgumentException("Access denied");
         return order;
@@ -410,7 +420,7 @@ public class OrderService {
         )).toList();
 
         return new OrderResponse(
-                order.getId(), order.getOrderNumber(), order.getTotalAmount(), order.getOrderStatus(),
+                order.getId(), order.getId(), order.getTotalAmount(), order.getOrderStatus(),
                 order.getPaymentStatus(), order.getRazorpayOrderId(), order.getTrackingId(),
                 order.getPaymentMethod(), cName, cEmail, order.getCreatedAt(), mappedItems,
                 order.getShippingAddress(), order.getShippingCity(), order.getShippingState(),

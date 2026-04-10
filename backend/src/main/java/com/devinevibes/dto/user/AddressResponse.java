@@ -1,10 +1,9 @@
 package com.devinevibes.dto.user;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record AddressResponse(
-        UUID id,
+        String id,
         String line1,
         String line2,
         String city,

@@ -39,7 +39,7 @@ public class AnalyticsService {
         long prepaidOrders = 0;
         long codOrders = 0;
 
-        Map<java.util.UUID, TopSellingProductResponse> productStatsMap = new HashMap<>();
+        Map<String, TopSellingProductResponse> productStatsMap = new HashMap<>();
 
         for (Order order : orders) {
             BigDecimal amount = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
@@ -54,7 +54,7 @@ public class AnalyticsService {
             }
 
             for (var item : order.getItems()) {
-                java.util.UUID pid = item.getProduct().getId();
+                String pid = item.getProduct().getId();
                 TopSellingProductResponse current = productStatsMap.getOrDefault(pid, new TopSellingProductResponse(
                         pid, item.getProduct().getName(), item.getProduct().getImageUrl(), 0, BigDecimal.ZERO
                 ));

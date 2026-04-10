@@ -27,16 +27,16 @@ public class PaymentService {
     }
 
     @Transactional
-    public CreatePaymentOrderResponse createRazorpayOrder(UUID orderId) {
+    public CreatePaymentOrderResponse createRazorpayOrder(String orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException("Order not found"));
         long amount = order.getTotalAmount().multiply(BigDecimal.valueOf(100)).longValue();
-        String razorOrderId = razorpayClient.createOrder(order.getId().toString(), amount);
+        String razorOrderId = razorpayClient.createOrder(order.getId(), amount);
         order.setRazorpayOrderId(razorOrderId);
         return new CreatePaymentOrderResponse(razorOrderId, "PENDING");
     }
 
     @Transactional
-    public void verifyRazorpayPayment(UUID orderId, VerifyPaymentRequest request) {
+    public void verifyRazorpayPayment(String orderId, VerifyPaymentRequest request) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException("Order not found"));
         
         if (order.getRazorpayOrderId() == null || !order.getRazorpayOrderId().equals(request.razorpayOrderId())) {

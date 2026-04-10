@@ -31,4 +31,6 @@ export interface ProductResponse {
   length?: number;
   breadth?: number;
   height?: number;
+  createdAt?: string;
+  salesCount: number;
 }

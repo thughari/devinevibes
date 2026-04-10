@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface AddressRepository extends JpaRepository<Address, UUID> {
+public interface AddressRepository extends JpaRepository<Address, String> {
     List<Address> findAllByUserOrderByCreatedAtDesc(User user);
-    Optional<Address> findByIdAndUser(UUID id, User user);
+    Optional<Address> findByIdAndUser(String id, User user);
 }

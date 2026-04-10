@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { ProductResponse } from '../../../shared/models/product.model';
@@ -41,7 +41,7 @@ import { CartService } from '../../../core/services/cart.service';
               />
             </div>
             <div class="grid grid-cols-4 gap-4">
-              @for (img of (product()?.imageUrls || [product()?.imageUrl]); track img) {
+              @for (img of allGalleryImages(); track img) {
                 @if (img) {
                   <button type="button" (click)="setSelectedMedia(img)" class="aspect-square rounded-md overflow-hidden border bg-brand-gray cursor-pointer hover:border-brand-green transition-colors">
                     <img [src]="img" alt="Thumb" class="w-full h-full object-cover" referrerpolicy="no-referrer">
@@ -177,6 +177,20 @@ export class ProductDetailComponent implements OnInit {
   quantity = signal(1);
   selectedMedia = signal<string | null>(null);
 
+  allGalleryImages = computed(() => {
+    const prod = this.product();
+    if (!prod) return [];
+    
+    const images = new Set<string>();
+    if (prod.imageUrl) images.add(prod.imageUrl);
+    if (prod.imageUrls) {
+      prod.imageUrls.forEach(url => {
+        if (url) images.add(url);
+      });
+    }
+    return Array.from(images);
+  });
+
   get currentProduct(): ProductResponse | null {
     return this.product();
   }
@@ -195,7 +209,7 @@ export class ProductDetailComponent implements OnInit {
     this.api.get<ProductResponse>(`/products/${id}`).subscribe({
       next: (data) => {
         this.product.set(data);
-        this.selectedMedia.set((data.imageUrls && data.imageUrls.length > 0) ? data.imageUrls[0] : data.imageUrl || null);
+        this.selectedMedia.set(data.imageUrl || (data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls[0] : null));
         this.isLoading.set(false);
       },
       error: () => {

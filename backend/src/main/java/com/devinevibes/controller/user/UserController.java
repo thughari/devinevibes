@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/user")
@@ -56,13 +55,13 @@ public class UserController {
     }
 
     @DeleteMapping("/addresses/{id}")
-    public ResponseEntity<Void> deleteAddress(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteAddress(@PathVariable String id) {
         userService.deleteAddress(SecurityUtils.currentPrincipalEmail(), id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/addresses/{id}")
-    public ResponseEntity<AddressResponse> updateAddress(@PathVariable UUID id, @Valid @RequestBody AddressRequest request) {
+    public ResponseEntity<AddressResponse> updateAddress(@PathVariable String id, @Valid @RequestBody AddressRequest request) {
         return ResponseEntity.ok(userService.updateAddress(SecurityUtils.currentPrincipalEmail(), id, request));
     }
 }

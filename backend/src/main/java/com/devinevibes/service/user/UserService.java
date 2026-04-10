@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -63,7 +62,7 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteAddress(String email, UUID addressId) {
+    public void deleteAddress(String email, String addressId) {
         User user = getByEmail(email);
         Address address = addressRepository.findByIdAndUser(addressId, user)
                 .orElseThrow(() -> new UserNotFoundException("Address not found"));
@@ -71,7 +70,7 @@ public class UserService {
     }
 
     @Transactional
-    public AddressResponse updateAddress(String email, UUID addressId, AddressRequest request) {
+    public AddressResponse updateAddress(String email, String addressId, AddressRequest request) {
         User user = getByEmail(email);
         Address address = addressRepository.findByIdAndUser(addressId, user)
                 .orElseThrow(() -> new UserNotFoundException("Address not found"));

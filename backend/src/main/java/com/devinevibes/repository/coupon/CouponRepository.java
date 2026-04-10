@@ -9,7 +9,7 @@ import java.util.UUID;
 import java.util.List;
 import java.time.Instant;
 
-public interface CouponRepository extends JpaRepository<Coupon, UUID> {
+public interface CouponRepository extends JpaRepository<Coupon, String> {
     Optional<Coupon> findByCodeIgnoreCase(String code);
     List<Coupon> findByActiveTrueAndExpiresAtAfterOrExpiresAtIsNull(Instant expiresAt);
 }

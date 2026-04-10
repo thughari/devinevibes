@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -41,7 +40,7 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/payment-order")
-    public ResponseEntity<CreatePaymentOrderResponse> createPaymentOrder(@PathVariable UUID orderId) {
+    public ResponseEntity<CreatePaymentOrderResponse> createPaymentOrder(@PathVariable String orderId) {
         return ResponseEntity.ok(paymentService.createRazorpayOrder(orderId));
     }
 
@@ -51,23 +50,23 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderResponse> getById(@PathVariable UUID id) {
+    public ResponseEntity<OrderResponse> getById(@PathVariable String id) {
         return ResponseEntity.ok(orderService.getMyOrderById(SecurityUtils.currentPrincipalEmail(), id));
     }
 
     @GetMapping("/{id}/tracking")
-    public ResponseEntity<TrackingResponse> tracking(@PathVariable UUID id) {
+    public ResponseEntity<TrackingResponse> tracking(@PathVariable String id) {
         return ResponseEntity.ok(orderService.getTracking(SecurityUtils.currentPrincipalEmail(), id));
     }
 
     @PostMapping("/{id}/verify")
-    public ResponseEntity<Void> verifyPayment(@PathVariable UUID id, @Valid @RequestBody VerifyPaymentRequest request) {
+    public ResponseEntity<Void> verifyPayment(@PathVariable String id, @Valid @RequestBody VerifyPaymentRequest request) {
         paymentService.verifyRazorpayPayment(id, request);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<java.util.Map<String, String>> cancel(@PathVariable UUID id) {
+    public ResponseEntity<java.util.Map<String, String>> cancel(@PathVariable String id) {
         orderService.cancelOrder(SecurityUtils.currentPrincipalEmail(), id);
         return ResponseEntity.ok(java.util.Map.of("message", "Order cancelled and stock restored"));
     }

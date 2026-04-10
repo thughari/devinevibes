@@ -225,7 +225,7 @@ export class OrderTrackingComponent implements OnInit {
     return this.baseSteps.map(step => {
       if (step.key === 'PAYMENT_SUCCESS') {
         if (method === 'COD') {
-          return { ...step, label: 'Order Confirmed & Processing (Cash on Delivery)', description: 'Order successfully locked. You will pay when you receive it.' };
+          return { ...step, label: 'Order Confirmed & Processing (Cash on Delivery)', description: 'Order successfully placed. You will pay when you receive it.' };
         }
       }
       return step;
