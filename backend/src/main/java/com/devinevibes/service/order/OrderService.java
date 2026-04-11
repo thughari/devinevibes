@@ -313,6 +313,10 @@ public class OrderService {
 
     @Transactional
     public void markPaymentSuccess(String razorpayOrderId, String razorpayPaymentId) {
+        if (razorpayOrderId == null || razorpayOrderId.isBlank()) {
+            log.warn("Attempted to mark payment success with null/empty Razorpay Order ID. Payment ID: {}", razorpayPaymentId);
+            return;
+        }
         Order order = orderRepository.findByRazorpayOrderId(razorpayOrderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found for payment"));
         order.setPaymentStatus(PaymentStatus.SUCCESS);
@@ -399,6 +403,10 @@ public class OrderService {
 
     @Transactional
     public void updateLogisticsStatus(String trackingId, OrderStatus newStatus, String courierName) {
+        if (trackingId == null || trackingId.isBlank()) {
+            log.warn("Ignoring logistics update with blank tracking ID");
+            return;
+        }
         Order order = orderRepository.findByTrackingId(trackingId)
             .orElseThrow(() -> new OrderNotFoundException("Order not found with AWB: " + trackingId));
 
@@ -466,4 +474,35 @@ public class OrderService {
             }
         }
     }
+
+    @Transactional
+    public void processRefundUpdate(String refundId, String status) {
+        Order order = orderRepository.findByRefundId(refundId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found for refund: " + refundId));
+
+        order.setRefundStatus(status);
+        if ("processed".equalsIgnoreCase(status)) {
+            order.setOrderStatus(OrderStatus.REFUNDED);
+            emailService.sendRefundSettled(order);
+            log.info("Refund processed and settled for order {}", order.getId());
+        } else if ("failed".equalsIgnoreCase(status)) {
+            emailService.sendRefundFailed(order);
+            log.warn("Refund failed for order {}", order.getId());
+        }
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    public void handlePaymentFailure(String razorpayOrderId, String reason) {
+        Order order = orderRepository.findByRazorpayOrderId(razorpayOrderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found for payment failure: " + razorpayOrderId));
+        
+        order.setPaymentStatus(PaymentStatus.FAILED);
+        order.setOrderStatus(OrderStatus.PAYMENT_FAILED);
+        orderRepository.save(order);
+        
+        emailService.sendPaymentFailed(order.getShippingEmail(), order.getId());
+        log.info("Payment failure processed for order {}. Reason: {}", order.getId(), reason);
+    }
 }
+

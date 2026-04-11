@@ -453,7 +453,119 @@ public class EmailService {
     }
 
     @Async("notificationExecutor")
+    public void sendRefundSettled(com.devinevibes.entity.order.Order order) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
+            helper.setTo(order.getShippingEmail());
+            helper.setSubject("Refund Successfully Processed — Order #" + order.getId());
+
+            String htmlContent = """
+                <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Georgia', serif; color: #1e293b;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <div style="background-color: #0f172a; padding: 30px; text-align: center;">
+                            <img src="https://devinevibes.in/logo.jpeg" alt="Devine Vibes" style="height: 60px;">
+                        </div>
+                        <div style="padding: 40px; border-top: 4px solid #10b981;">
+                            <h2 style="color: #64748b; text-transform: uppercase; letter-spacing: 2px; font-size: 14px; margin-bottom: 10px; text-align: center;">Payment Update</h2>
+                            <h1 style="color: #0f172a; font-size: 28px; margin-top: 0; margin-bottom: 20px; font-weight: normal; text-align: center;">Refund Settled</h1>
+                            
+                            <p style="font-size: 16px; line-height: 1.8; color: #475569; text-align: center;">Great news! The refund for your order <strong>#%s</strong> has been successfully processed by the banks and should now be reflected in your account.</p>
+                            
+                            <div style="margin: 30px 0; padding: 25px; background-color: #f0fdf4; border: 1px solid #dcfce7; border-radius: 4px; text-align: center;">
+                                <div style="font-size: 12px; color: #166534; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Refund Amount</div>
+                                <div style="font-size: 32px; color: #166534; font-weight: bold;">₹%s</div>
+                            </div>
+                            
+                            <p style="font-size: 14px; line-height: 1.6; color: #64748b; text-align: center;">We hope to see you again soon at Devine Vibes. Have a blessed day!</p>
+                        </div>
+                    </div>
+                </div>
+                """.formatted(order.getId(), order.getTotalAmount());
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send refund settled email", e);
+        }
+    }
+
+    @Async("notificationExecutor")
+    public void sendRefundFailed(com.devinevibes.entity.order.Order order) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
+            helper.setTo(order.getShippingEmail());
+            helper.setSubject("Important: Refund Issue — Order #" + order.getId());
+
+            String htmlContent = """
+                <div style="background-color: #fffafb; padding: 40px 20px; font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #fee2e2; border-radius: 4px; overflow: hidden;">
+                        <div style="padding: 40px; border-top: 4px solid #ef4444;">
+                            <h1 style="color: #b91c1c; font-size: 24px; margin-top: 0;">Problem with your Refund</h1>
+                            <p style="font-size: 16px; line-height: 1.7;">Hi %s, we encountered an issue while processing the refund for order <strong>#%s</strong>.</p>
+                            <p style="font-size: 16px; line-height: 1.7;">This can sometimes happen if the original payment source is no longer active. Don't worry, your money is safe.</p>
+                            
+                            <div style="margin: 25px 0; padding: 20px; background-color: #fef2f2; border-radius: 4px;">
+                                <strong>What should I do?</strong><br>
+                                Please reply to this email or contact our support team at <strong>support@devinevibes.in</strong> with your order ID and an alternative bank account for the refund.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """.formatted(order.getShippingFirstName(), order.getId());
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send refund failed email", e);
+        }
+    }
+
+    @Async("notificationExecutor")
+    public void sendPaymentFailed(String to, String orderId) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(new jakarta.mail.internet.InternetAddress(orderSenderEmail, fromName));
+            helper.setTo(to);
+            helper.setSubject("Your Devine Vibes Checkout Attempt");
+
+            String htmlContent = """
+                <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <div style="background-color: #0f172a; padding: 25px; text-align: center;">
+                            <img src="https://devinevibes.in/logo.jpeg" alt="Devine Vibes" style="height: 50px;">
+                        </div>
+                        <div style="padding: 40px; border-top: 4px solid #f59e0b;">
+                             <h1 style="color: #0f172a; font-size: 24px; margin-top: 0;">Oops, something went wrong</h1>
+                             <p style="font-size: 15px; line-height: 1.6; color: #475569;">It looks like your payment attempt for order <strong>#%s</strong> didn't go through. Don't worry, no money was charged.</p>
+                             
+                             <div style="text-align: center; margin: 35px 0;">
+                                 <a href="%s/cart" style="display: inline-block; background-color: #c59d5f; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">Finish Your Purchase</a>
+                             </div>
+                             
+                             <p style="font-size: 14px; color: #64748b; text-align: center;">If you're having trouble, you can also select <strong>Cash on Delivery (COD)</strong> at checkout for a hassle-free experience.</p>
+                        </div>
+                    </div>
+                </div>
+                """.formatted(orderId, uiUrl);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send payment failed email", e);
+        }
+    }
+
+    @Async("notificationExecutor")
     public void send(String to, String subject, String body) {
         log.info("Simple EMAIL to={} subject={} body={}", to, subject, body);
     }
 }
+

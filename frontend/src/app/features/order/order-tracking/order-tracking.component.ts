@@ -33,22 +33,28 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
       <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
         <!-- Header -->
         <div class="px-6 py-8 border-b border-gray-100 text-center" 
-             [class.bg-gray-50]="tracking()?.orderStatus !== 'CANCELLED' && tracking()?.orderStatus !== 'REFUND_INITIATED'"
-             [class.bg-red-50]="tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED'">
+             [class.bg-gray-50]="!isVoided()"
+             [class.bg-red-50]="isVoided()">
           
           <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 shadow-sm"
-               [class.bg-green-100]="tracking()?.orderStatus !== 'CANCELLED' && tracking()?.orderStatus !== 'REFUND_INITIATED'"
-               [class.bg-red-100]="tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED'">
-            @if (tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED') {
-              <mat-icon class="text-red-600 text-3xl">cancel</mat-icon>
+               [class.bg-green-100]="!isVoided()"
+               [class.bg-red-100]="isVoided()">
+            @if (isVoided()) {
+              <mat-icon class="text-red-600 text-3xl">{{ tracking()?.orderStatus === 'PAYMENT_FAILED' ? 'error_outline' : 'cancel' }}</mat-icon>
             } @else {
               <mat-icon class="text-dv-green text-3xl">check_circle</mat-icon>
             }
           </div>
 
-          @if (tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED') {
-            <h1 class="text-3xl font-sans font-medium text-red-700 mb-2">Order Cancelled</h1>
-            <p class="text-red-500">This order has been cancelled. Any payments made will be processed back to your original source.</p>
+          @if (isVoided()) {
+            <h1 class="text-3xl font-sans font-medium text-red-700 mb-2">
+              {{ tracking()?.orderStatus === 'REFUNDED' ? 'Order Refunded' : 
+                 tracking()?.orderStatus === 'PAYMENT_FAILED' ? 'Payment Failed' : 'Order Cancelled' }}
+            </h1>
+            <p class="text-red-500">
+              {{ tracking()?.orderStatus === 'PAYMENT_FAILED' ? 'The payment for this order could not be processed.' : 
+                 'This order has been voided and is no longer in progress.' }}
+            </p>
           } @else {
             <h1 class="text-3xl font-sans font-medium text-gray-900 mb-2">Order Confirmed</h1>
             <p class="text-gray-500">Thank you for your purchase. Your sacred items are being prepared.</p>
@@ -99,17 +105,32 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
           @if (loading()) {
             <p class="text-sm text-gray-400 text-center py-8">Loading tracking info...</p>
           } @else {
-            @if (tracking()?.orderStatus === 'CANCELLED' || tracking()?.orderStatus === 'REFUND_INITIATED') {
+            @if (isVoided()) {
                <div class="bg-red-50/30 border border-red-100 rounded-xl p-8 text-center">
-                  <mat-icon class="text-red-400 text-4xl mb-2">info</mat-icon>
-                  <h3 class="text-lg font-medium text-red-900">Order Voided</h3>
-                  <p class="text-sm text-red-600 mt-1">This order is no longer in progress.</p>
+                  <mat-icon class="text-red-400 text-4xl mb-2">{{ tracking()?.orderStatus === 'PAYMENT_FAILED' ? 'payment' : 'info' }}</mat-icon>
+                  <h3 class="text-lg font-medium text-red-900">
+                    {{ tracking()?.orderStatus === 'PAYMENT_FAILED' ? 'Payment Unsuccessful' : 'Order Voided' }}
+                  </h3>
+                  <p class="text-sm text-red-600 mt-1">
+                    {{ tracking()?.orderStatus === 'PAYMENT_FAILED' ? 'We were unable to verify your payment. Please try placing the order again.' : 'This order is no longer in progress.' }}
+                  </p>
                   
-                  @if (tracking()?.orderStatus === 'REFUND_INITIATED') {
+                  @if (tracking()?.orderStatus === 'REFUND_INITIATED' || tracking()?.orderStatus === 'REFUNDED') {
                     <div class="mt-6 p-4 bg-white rounded-lg border border-red-100 inline-block text-left shadow-sm">
                       <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Automated Refund Info</p>
                       <p class="text-sm text-gray-700">A refund for <strong>{{ tracking()?.totalAmount | currency:'INR':'symbol':'1.0-0' }}</strong> has been initiated via Razorpay.</p>
-                      <p class="text-xs text-dv-green mt-2 font-mono">Status: Processing in Bank</p>
+                      
+                      @if (tracking()?.orderStatus === 'REFUNDED') {
+                        <div class="mt-3 flex items-center gap-2 text-dv-green font-medium">
+                          <mat-icon class="text-sm">verified</mat-icon>
+                          <span class="text-xs">Refund successfully processed and settled.</span>
+                        </div>
+                      } @else {
+                        <p class="text-xs text-amber-600 mt-2 font-mono flex items-center gap-1">
+                           <mat-icon class="text-[14px] h-[14px] w-[14px]">history</mat-icon>
+                           Status: Processing at Bank
+                        </p>
+                      }
                     </div>
                   }
                </div>
@@ -317,10 +338,15 @@ export class OrderTrackingComponent implements OnInit {
 
   isStepReached(stepKey: string): boolean {
     const currentStatus = this.tracking()?.orderStatus;
-    if (!currentStatus) return false;
+    if (!currentStatus || this.isVoided()) return false;
     const currentIndex = STATUS_STEPS.indexOf(currentStatus as any);
     const stepIndex = STATUS_STEPS.indexOf(stepKey as any);
     return stepIndex <= currentIndex;
+  }
+
+  isVoided(): boolean {
+    const status = this.tracking()?.orderStatus;
+    return ['CANCELLED', 'REFUND_INITIATED', 'REFUNDED', 'PAYMENT_FAILED'].includes(status as any);
   }
 
   isCurrentStep(stepKey: string): boolean {

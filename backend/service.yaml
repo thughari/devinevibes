@@ -123,6 +123,11 @@ spec:
             secretKeyRef:
               name: razorpay-key-secret
               key: latest
+        - name: RAZORPAY_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: razorpay-webhook-secret
+              key: latest
 
         # Shiprocket
         - name: SHIPROCKET_EMAIL
@@ -134,6 +139,11 @@ spec:
           valueFrom:
             secretKeyRef:
               name: shiprocket-password
+              key: latest
+        - name: SHIPROCKET_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: shiprocket-webhook-secret
               key: latest
 
         # Twilio

@@ -26,4 +26,7 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
 
     @EntityGraph(attributePaths = {"items", "user"})
     Optional<Order> findByTrackingId(String trackingId);
+
+    @EntityGraph(attributePaths = {"items", "user"})
+    Optional<Order> findByRefundId(String refundId);
 }
