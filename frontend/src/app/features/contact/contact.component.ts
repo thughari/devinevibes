@@ -13,7 +13,7 @@ import { Component } from '@angular/core';
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
           <h2 class="font-semibold text-brand-dark mb-3">Support Details</h2>
-          <p class="text-sm text-brand-text mb-1"><strong>Email:</strong> verification@devinevibes.in</p>
+          <p class="text-sm text-brand-text mb-1"><strong>Email:</strong> support@devinevibes.in</p>
           <p class="text-sm text-brand-text mb-1"><strong>Response Time:</strong> 24 business hours</p>
           <p class="text-sm text-brand-text"><strong>Hours:</strong> Mon–Sat, 10:00 AM – 7:00 PM IST</p>
         </div>
