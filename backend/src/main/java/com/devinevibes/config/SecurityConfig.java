@@ -54,11 +54,19 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**", "/api/config").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**", "/api/config", "/api/banners", "/api/categories").permitAll()
                         .requestMatchers(publicEndpoints).permitAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(e -> e.authenticationEntryPoint((request, response, authException) ->
-                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
+                .exceptionHandling(e -> e.authenticationEntryPoint((request, response, authException) -> {
+                    String uri = request.getRequestURI();
+                    if (uri != null && uri.startsWith("/api/")) {
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"message\": \"Unauthorized\", \"status\": 401}");
+                    } else {
+                        response.sendRedirect("/oauth2/authorization/google");
+                    }
+                }))
                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
