@@ -2,6 +2,7 @@ package com.devinevibes.service.category;
 
 import com.devinevibes.entity.category.Category;
 import com.devinevibes.repository.category.CategoryRepository;
+import com.devinevibes.repository.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import java.util.UUID;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
@@ -61,8 +63,39 @@ public class CategoryService {
     }
 
     @Transactional
+    public Category getDefaultCategory() {
+        return categoryRepository.findById("CAT-UNCATEGORIZED")
+            .orElseGet(() -> {
+                Category cat = new Category();
+                cat.setId("CAT-UNCATEGORIZED");
+                cat.setName("Uncategorized");
+                cat.setSlug("uncategorized");
+                cat.setDescription("Default system category for unassigned products");
+                cat.setActive(false);
+                return categoryRepository.save(cat);
+            });
+    }
+
+    @Transactional
     @org.springframework.cache.annotation.CacheEvict(value = "categories", allEntries = true)
     public void deleteCategory(String id) {
+        if ("CAT-UNCATEGORIZED".equals(id)) {
+            throw new com.devinevibes.exception.BadRequestException("Cannot delete the default Uncategorized category.");
+        }
+        
+        List<com.devinevibes.entity.product.Product> attachedProducts = productRepository.findAll().stream()
+            .filter(p -> p.getCategory() != null && p.getCategory().getId().equals(id))
+            .toList();
+            
+        if (!attachedProducts.isEmpty()) {
+            Category defaultCat = getDefaultCategory();
+                
+            for (com.devinevibes.entity.product.Product p : attachedProducts) {
+                p.setCategory(defaultCat);
+                productRepository.save(p);
+            }
+        }
+        
         categoryRepository.deleteById(id);
     }
 }

@@ -303,6 +303,14 @@ public class OrderService {
         return new TrackingResponse(order.getTrackingId(), order.getOrderStatus());
     }
 
+    public com.devinevibes.dto.order.LiveTrackingResponse getLiveTracking(String email, String orderId) {
+        Order order = findOwnedOrder(email, orderId);
+        if (order.getTrackingId() == null || order.getTrackingId().isBlank() || order.getTrackingId().contains("PENDING")) {
+            return new com.devinevibes.dto.order.LiveTrackingResponse(null, null, null, java.util.Collections.emptyList());
+        }
+        return shiprocketClient.trackShipment(order.getTrackingId());
+    }
+
     @Transactional
     public void markPaymentSuccess(String razorpayOrderId, String razorpayPaymentId) {
         Order order = orderRepository.findByRazorpayOrderId(razorpayOrderId)
@@ -390,14 +398,18 @@ public class OrderService {
     }
 
     @Transactional
-    public void updateLogisticsStatus(String trackingId, OrderStatus status) {
-        Order order = orderRepository.findAll().stream()
-                .filter(o -> trackingId.equals(o.getTrackingId()))
-                .findFirst().orElseThrow(() -> new OrderNotFoundException("Tracking not found"));
-        order.setOrderStatus(status);
+    public void updateLogisticsStatus(String trackingId, OrderStatus newStatus, String courierName) {
+        Order order = orderRepository.findByTrackingId(trackingId)
+            .orElseThrow(() -> new OrderNotFoundException("Order not found with AWB: " + trackingId));
 
-        // Send tracking updates only for major events (SHIPPED, DELIVERED)
-        emailService.sendOrderUpdate(order, status);
+        order.setOrderStatus(newStatus);
+        if (courierName != null && !courierName.isBlank()) {
+            order.setCourierName(courierName);
+        }
+        orderRepository.save(order);
+
+        // Optional: trigger email updates
+        emailService.sendOrderUpdate(order, newStatus);
     }
 
     public Order findOwnedOrder(String email, String orderId) {
@@ -422,7 +434,7 @@ public class OrderService {
         return new OrderResponse(
                 order.getId(), order.getId(), order.getTotalAmount(), order.getOrderStatus(),
                 order.getPaymentStatus(), order.getRazorpayOrderId(), order.getTrackingId(),
-                order.getPaymentMethod(), cName, cEmail, order.getCreatedAt(), mappedItems,
+                order.getCourierName(), order.getPaymentMethod(), cName, cEmail, order.getCreatedAt(), mappedItems,
                 order.getShippingAddress(), order.getShippingCity(), order.getShippingState(),
                 order.getShippingPostalCode(), order.getShippingPhone(), 
                 order.getShippingFirstName(), order.getShippingLastName(),

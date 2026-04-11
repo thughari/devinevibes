@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import com.devinevibes.entity.order.OrderStatus;
 import java.time.Instant;
@@ -24,4 +23,7 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
     Optional<Order> findByRazorpayOrderId(String razorpayOrderId);
 
     List<Order> findByOrderStatusAndCreatedAtBefore(OrderStatus status, Instant cutoff);
+
+    @EntityGraph(attributePaths = {"items", "user"})
+    Optional<Order> findByTrackingId(String trackingId);
 }

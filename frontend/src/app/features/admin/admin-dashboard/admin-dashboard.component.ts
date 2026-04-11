@@ -61,8 +61,8 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
               <div class="grid grid-cols-2 gap-4">
                 <div class="col-span-2">
                   <label class="block text-xs font-bold text-brand-text mb-1 uppercase tracking-widest">Category</label>
-                  <select formControlName="categoryId" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-green focus:ring-brand-green sm:text-sm border py-2">
-                    <option value="">Select Category</option>
+                  <select formControlName="categoryId" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-green focus:ring-brand-green sm:text-sm border py-2 bg-white">
+                    <option [value]="'CAT-UNCATEGORIZED'">Uncategorized (Default)</option>
                     @for (cat of categories(); track cat.id) {
                       <option [value]="cat.id">{{ cat.name }}</option>
                     }
@@ -956,17 +956,42 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
                       <input formControlName="name" placeholder="e.g. Incense Sticks" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
                     </div>
                     <div class="space-y-1">
-                      <label class="text-xs font-bold text-gray-500 uppercase">Slug (optional)</label>
+                      <label class="text-xs font-bold text-gray-500 uppercase">Slug</label>
                       <input formControlName="slug" placeholder="e.g. incense-sticks" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20" />
                     </div>
                   </div>
                   <div class="space-y-1">
-                    <label class="text-xs font-bold text-gray-500 uppercase">Description</label>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Description (optional)</label>
                     <textarea formControlName="description" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20"></textarea>
                   </div>
-                  <div class="flex items-center gap-3 pt-2">
+
+                  <div class="space-y-1 md:col-span-2 mt-4">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Category Image</label>
+                    @if (categoryImagePreview) {
+                      <div class="relative w-40 h-40 rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                        <img [src]="categoryImagePreview" class="w-full h-full object-cover">
+                        <button type="button" (click)="clearCategoryImage()" class="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/80 rounded-full text-white backdrop-blur-sm transition">
+                          <mat-icon class="text-[18px]">close</mat-icon>
+                        </button>
+                      </div>
+                    } @else {
+                      <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 hover:border-dv-green/50 transition cursor-pointer w-full" (click)="catImageInput.click()">
+                        <mat-icon class="text-gray-400 text-3xl mb-2">image</mat-icon>
+                        <p class="text-sm text-gray-600 font-medium">Upload Image</p>
+                      </div>
+                    }
+                    <input #catImageInput type="file" accept="image/*" class="hidden" (change)="onCategoryImageSelected($event)">
+                  </div>
+
+                  <div class="flex items-center gap-3 pt-4">
                     <button type="button" (click)="closeCategoryForm()" class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 transition">Cancel</button>
-                    <button type="submit" [disabled]="categoryForm.invalid" class="bg-dv-green text-white px-6 py-2 rounded-lg font-medium text-sm shadow-sm hover:bg-green-700 transition">Save Category</button>
+                    <button type="submit" [disabled]="categoryForm.invalid || uploading()" class="bg-dv-green text-white px-6 py-2 rounded-lg font-medium text-sm shadow-sm hover:bg-green-700 transition disabled:opacity-50">
+                      @if(uploading()) {
+                        <mat-icon class="animate-spin text-[18px]">refresh</mat-icon>
+                      } @else {
+                        Save Category
+                      }
+                    </button>
                   </div>
                 </form>
               </div>
@@ -1007,6 +1032,12 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
             </div>
             <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Delete {{ deleteConfirm()?.type | titlecase }}?</h3>
             <p class="text-sm text-gray-500 text-center mb-6">Are you sure you want to delete <strong class="text-gray-800 font-semibold">{{ deleteConfirm()?.name }}</strong>? This action cannot be undone.</p>
+            @if (deleteConfirm()?.type === 'category' && getAttachedProductsCount() > 0) {
+              <div class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl mb-6 text-sm font-medium flex items-start gap-3 shadow-inner text-left mx-auto max-w-[90%]">
+                <mat-icon class="text-amber-600 text-[20px] shrink-0 mt-0.5">info</mat-icon>
+                <span>Warning: This category has <strong>{{ getAttachedProductsCount() }}</strong> products attached. Deleting it will automatically move them to "Uncategorized", allowing you to safely reassign them later.</span>
+              </div>
+            }
             <div class="flex gap-3">
               <button (click)="deleteConfirm.set(null)" class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-medium transition-colors">Cancel</button>
               <button (click)="executeDelete()" class="flex-1 px-4 py-2.5 bg-red-600 text-white hover:bg-red-700 rounded-xl font-medium transition-colors shadow-md shadow-red-500/20">Delete</button>
@@ -1038,10 +1069,27 @@ export class AdminDashboardComponent {
   editingCategoryId = signal<string | null>(null);
   categoryForm = this.fb.group({
     name: ['', Validators.required],
-    slug: [''],
+    slug: ['', Validators.required],
     description: [''],
+    imageUrl: [''],
     active: [true]
   });
+
+  categoryImageFile: File | null = null;
+  categoryImagePreview: string | null = null;
+
+  onCategoryImageSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.item(0) || null;
+    this.categoryImageFile = file;
+    this.categoryImagePreview = file ? URL.createObjectURL(file) : null;
+  }
+
+  clearCategoryImage() {
+    this.categoryImageFile = null;
+    this.categoryImagePreview = null;
+    this.categoryForm.patchValue({ imageUrl: '' });
+  }
 
   // Banners
   banners = signal<Banner[]>([]);
@@ -1143,7 +1191,7 @@ export class AdminDashboardComponent {
     originalPrice: [null as number | null],
     stock: [0, [Validators.required, Validators.min(0)]],
     imageUrl: [''],
-    categoryId: [''],
+    categoryId: ['CAT-UNCATEGORIZED'],
     weight: [null as number | null],
     length: [null as number | null],
     breadth: [null as number | null],
@@ -1277,7 +1325,7 @@ export class AdminDashboardComponent {
     this.api.get<CouponResponse[]>('/admin/coupons').subscribe({ next: (coupons) => this.coupons.set(coupons) });
     this.api.get<StoreConfigResponse>('/config').subscribe({ next: (config) => this.configForm.patchValue(config) });
     this.api.get<AnalyticsResponse>('/admin/analytics').subscribe({ next: (analytics) => this.analytics.set(analytics) });
-    this.categoryService.getAdminCategories().subscribe({ next: (cats) => this.categories.set(cats) });
+    this.categoryService.getAdminCategories().subscribe({ next: (cats) => this.categories.set(cats.filter(c => c.id !== 'CAT-UNCATEGORIZED')) });
     this.api.get<Banner[]>('/admin/banners').subscribe({ next: (banners) => this.banners.set(banners) });
   }
 
@@ -1315,7 +1363,7 @@ export class AdminDashboardComponent {
   addProduct() { 
     this.editingProductId = null;
     this.showAddProduct.set(true); 
-    this.addProductForm.reset({ name: '', description: '', price: 0, originalPrice: null, stock: 0, imageUrl: '' });
+    this.addProductForm.reset({ name: '', description: '', price: 0, originalPrice: null, stock: 0, imageUrl: '', categoryId: 'CAT-UNCATEGORIZED' });
     this.clearThumbnail();
     this.productImageFiles = [];
     this.productVideoFiles = [];
@@ -1331,6 +1379,12 @@ export class AdminDashboardComponent {
 
   confirmDelete(type: 'product' | 'coupon' | 'category' | 'banner', id: string, name: string) {
     this.deleteConfirm.set({ type, id, name });
+  }
+
+  getAttachedProductsCount(): number {
+    const target = this.deleteConfirm();
+    if (target?.type !== 'category') return 0;
+    return this.products().filter(p => p.categoryId === target.id).length;
   }
 
   executeDelete() {
@@ -1401,7 +1455,7 @@ export class AdminDashboardComponent {
       originalPrice: product.originalPrice ?? null,
       stock: product.stock,
       imageUrl: product.imageUrl || '',
-      categoryId: product.categoryId || '',
+      categoryId: product.categoryId || 'CAT-UNCATEGORIZED',
       weight: product.weight || null,
       length: product.length || null,
       breadth: product.breadth || null,
@@ -1438,7 +1492,7 @@ export class AdminDashboardComponent {
           }
           this.editingProductId = null;
           this.showAddProduct.set(false);
-          this.addProductForm.reset({ name: '', description: '', price: 0, originalPrice: null, stock: 0, imageUrl: '', categoryId: '', weight: null, length: null, breadth: null, height: null });
+          this.addProductForm.reset({ name: '', description: '', price: 0, originalPrice: null, stock: 0, imageUrl: '', categoryId: 'CAT-UNCATEGORIZED', weight: null, length: null, breadth: null, height: null });
           this.thumbnailFile = null;
           this.thumbnailPreview = null;
           this.productImageFiles = [];
@@ -1518,7 +1572,8 @@ export class AdminDashboardComponent {
   // Category Methods
   openAddCategory() {
     this.editingCategoryId.set(null);
-    this.categoryForm.reset({ active: true });
+    this.categoryForm.reset({ active: true, imageUrl: '' });
+    this.clearCategoryImage();
     this.showCategoryForm.set(true);
   }
 
@@ -1528,39 +1583,59 @@ export class AdminDashboardComponent {
       name: cat.name,
       slug: cat.slug,
       description: cat.description,
+      imageUrl: cat.imageUrl || '',
       active: cat.active
     });
+    this.categoryImagePreview = cat.imageUrl || null;
+    this.categoryImageFile = null;
     this.showCategoryForm.set(true);
   }
 
   closeCategoryForm() {
     this.showCategoryForm.set(false);
     this.editingCategoryId.set(null);
-    this.categoryForm.reset();
+    this.categoryForm.reset({ active: true, imageUrl: '' });
+    this.clearCategoryImage();
   }
 
-  saveCategory() {
+  async saveCategory() {
     if (this.categoryForm.invalid) return;
-    const payload = this.categoryForm.value as Partial<Category>;
-    const id = this.editingCategoryId();
-    
-    const request$ = id 
-      ? this.categoryService.updateCategory(id, payload)
-      : this.categoryService.createCategory(payload);
+    this.uploading.set(true);
 
-    request$.subscribe({
-      next: (cat) => {
-        if (id) {
-          this.categories.update(list => list.map(c => c.id === cat.id ? cat : c));
-          this.snackbar.showSuccess('Category updated');
-        } else {
-          this.categories.update(list => [...list, cat]);
-          this.snackbar.showSuccess('Category created');
+    try {
+      let finalImageUrl = this.categoryForm.value.imageUrl || '';
+      if (this.categoryImageFile) {
+        finalImageUrl = await this.uploadFile(this.categoryImageFile);
+      }
+
+      const payload = { ...this.categoryForm.value, imageUrl: finalImageUrl } as Partial<Category>;
+      const id = this.editingCategoryId();
+      
+      const request$ = id 
+        ? this.categoryService.updateCategory(id, payload)
+        : this.categoryService.createCategory(payload);
+
+      request$.subscribe({
+        next: (cat) => {
+          if (id) {
+            this.categories.update(list => list.map(c => c.id === cat.id ? cat : c));
+            this.snackbar.showSuccess('Category updated');
+          } else {
+            this.categories.update(list => [...list, cat]);
+            this.snackbar.showSuccess('Category created');
+          }
+          this.closeCategoryForm();
+          this.uploading.set(false);
+        },
+        error: () => {
+          this.snackbar.showError('Failed to save category');
+          this.uploading.set(false);
         }
-        this.closeCategoryForm();
-      },
-      error: () => this.snackbar.showError('Failed to save category')
-    });
+      });
+    } catch (err) {
+      this.snackbar.showError('Image upload failed');
+      this.uploading.set(false);
+    }
   }
 
   // Banner Methods

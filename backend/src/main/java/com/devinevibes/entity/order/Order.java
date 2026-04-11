@@ -43,6 +43,7 @@ public class Order {
     private String shiprocketOrderId;
     private String shipmentId;
     private String trackingId;
+    private String courierName;
     private String refundId;
     private String refundStatus;
     private Instant refundedAt;

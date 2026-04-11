@@ -59,6 +59,11 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getTracking(SecurityUtils.currentPrincipalEmail(), id));
     }
 
+    @GetMapping("/{id}/live-tracking")
+    public ResponseEntity<com.devinevibes.dto.order.LiveTrackingResponse> liveTracking(@PathVariable String id) {
+        return ResponseEntity.ok(orderService.getLiveTracking(SecurityUtils.currentPrincipalEmail(), id));
+    }
+
     @PostMapping("/{id}/verify")
     public ResponseEntity<Void> verifyPayment(@PathVariable String id, @Valid @RequestBody VerifyPaymentRequest request) {
         paymentService.verifyRazorpayPayment(id, request);

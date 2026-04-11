@@ -59,37 +59,13 @@ declare global {
               Continue with Google
             </button>
 
-            <div class="relative py-4">
+            <div class="relative py-4 mt-6 mb-2">
               <div class="absolute inset-0 flex items-center">
                 <div class="w-full border-t border-gray-100"></div>
               </div>
               <div class="relative flex justify-center text-[10px] uppercase tracking-widest font-black text-gray-400">
-                <span class="px-4 bg-white/0">or explore with OTP</span>
+                <span class="px-4 bg-white/0">or continue with Email</span>
               </div>
-            </div>
-
-            <!-- OTP Tabs -->
-            <div class="flex p-1 bg-gray-50/50 border border-gray-100 rounded-xl mb-6 shadow-inner">
-              <button 
-                type="button" 
-                (click)="switchMode('email')" 
-                [class.bg-white]="mode() === 'email'" 
-                [class.shadow-sm]="mode() === 'email'"
-                [class.text-brand-green]="mode() === 'email'"
-                class="flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 text-gray-400"
-              >
-                Email
-              </button>
-              <button 
-                type="button" 
-                (click)="switchMode('phone')" 
-                [class.bg-white]="mode() === 'phone'" 
-                [class.shadow-sm]="mode() === 'phone'"
-                [class.text-brand-green]="mode() === 'phone'"
-                class="flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 text-gray-400"
-              >
-                Phone
-              </button>
             </div>
 
             <form class="space-y-5" [formGroup]="mode() === 'phone' ? phoneForm : emailForm" (ngSubmit)="requestOtp()">
@@ -234,7 +210,7 @@ export class LoginComponent {
     otp: ['', [Validators.required, Validators.pattern('^[0-9]{6}$')]]
   });
 
-  mode = signal<'phone' | 'email'>('phone');
+  mode = signal<'phone' | 'email'>('email');
   otpSent = signal(false);
   isLoading = signal(false);
 

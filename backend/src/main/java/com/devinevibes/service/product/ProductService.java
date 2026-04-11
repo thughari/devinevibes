@@ -51,8 +51,14 @@ public class ProductService {
         product.setPrice(request.price());
         product.setOriginalPrice(request.originalPrice());
         product.setStock(request.stock());
-        if (request.categoryId() != null) {
-            product.setCategory(categoryService.getCategoryById(request.categoryId()));
+        if (request.categoryId() != null && !request.categoryId().isBlank()) {
+            if (request.categoryId().equals("CAT-UNCATEGORIZED")) {
+                product.setCategory(categoryService.getDefaultCategory());
+            } else {
+                product.setCategory(categoryService.getCategoryById(request.categoryId()));
+            }
+        } else {
+            product.setCategory(categoryService.getDefaultCategory());
         }
         product.setWeight(request.weight());
         product.setLength(request.length());
@@ -82,8 +88,14 @@ public class ProductService {
         p.setPrice(request.price());
         p.setOriginalPrice(request.originalPrice());
         p.setStock(request.stock());
-        if (request.categoryId() != null) {
-            p.setCategory(categoryService.getCategoryById(request.categoryId()));
+        if (request.categoryId() != null && !request.categoryId().isBlank()) {
+            if (request.categoryId().equals("CAT-UNCATEGORIZED")) {
+                p.setCategory(categoryService.getDefaultCategory());
+            } else {
+                p.setCategory(categoryService.getCategoryById(request.categoryId()));
+            }
+        } else {
+            p.setCategory(categoryService.getDefaultCategory());
         }
         p.setWeight(request.weight());
         p.setLength(request.length());

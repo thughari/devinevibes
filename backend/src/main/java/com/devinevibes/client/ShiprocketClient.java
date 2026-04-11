@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -179,6 +180,54 @@ public class ShiprocketClient {
         } catch (Exception e) {
             log.error("Failed to cancel Shiprocket order {}: {}", shiprocketOrderId, e.getMessage());
         }
+    }
+
+    public com.devinevibes.dto.order.LiveTrackingResponse trackShipment(String awb) {
+        if (awb == null || awb.isBlank() || awb.contains("PENDING")) {
+            return new com.devinevibes.dto.order.LiveTrackingResponse(null, null, null, Collections.emptyList());
+        }
+        try {
+            String token = getToken();
+            if (token == null) return new com.devinevibes.dto.order.LiveTrackingResponse(null, null, null, Collections.emptyList());
+
+            String url = baseUrl + "/v1/external/courier/track/awb/" + awb;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, org.springframework.http.HttpMethod.GET, entity,
+                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> body = response.getBody();
+                if (body.get("tracking_data") instanceof Map) {
+                    Map<String, Object> tData = (Map<String, Object>) body.get("tracking_data");
+                    
+                    Integer trackStatus = (Integer) tData.get("track_status");
+                    if (trackStatus != null && trackStatus == 1) {
+                        String currentStatus = (String) tData.get("shipment_status");
+                        String courierName = (String) tData.get("courier_name");
+                        String etd = (String) tData.get("etd");
+
+                        List<com.devinevibes.dto.order.ShipmentScanDto> scanList = new ArrayList<>();
+                        if (tData.get("track_url") != null && tData.get("shipment_track_activities") != null) {
+                            List<Map<String, Object>> activities = (List<Map<String, Object>>) tData.get("shipment_track_activities");
+                            for (Map<String, Object> act : activities) {
+                                String date = (String) act.get("date");
+                                String activity = (String) act.get("activity");
+                                String location = (String) act.get("location");
+                                scanList.add(new com.devinevibes.dto.order.ShipmentScanDto(date, activity, location));
+                            }
+                        }
+                        return new com.devinevibes.dto.order.LiveTrackingResponse(courierName, currentStatus, etd, scanList);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch Shiprocket tracking for AWB {}: {}", awb, e.getMessage());
+        }
+        return new com.devinevibes.dto.order.LiveTrackingResponse(null, null, null, Collections.emptyList());
     }
 
     public record ShipmentResponse(String shiprocketOrderId, String shipmentId, String trackingId) {

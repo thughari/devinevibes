@@ -13,6 +13,7 @@ public record OrderResponse(
         PaymentStatus paymentStatus,
         String razorpayOrderId,
         String trackingId,
+        String courierName,
         String paymentMethod,
         String customerName,
         String customerEmail,

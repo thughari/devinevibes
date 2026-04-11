@@ -1,20 +1,35 @@
 import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ApiService } from '../../../core/services/api.service';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { ConfigService } from '../../../core/services/config.service';
-import { OrderResponse } from '../../../shared/models/order.model';
+import { OrderResponse, LiveTrackingResponse } from '../../../shared/models/order.model';
 
 const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'] as const;
 
 @Component({
   selector: 'app-order-tracking',
   standalone: true,
-  imports: [RouterLink, MatIconModule, CurrencyPipe],
+  imports: [RouterLink, MatIconModule, CurrencyPipe, DatePipe],
   template: `
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      @if (orderNotFound()) {
+        <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+          <div class="px-6 py-16 text-center">
+            <div class="w-20 h-20 mx-auto rounded-full bg-amber-50 flex items-center justify-center mb-6">
+              <mat-icon class="text-amber-500 text-4xl">search_off</mat-icon>
+            </div>
+            <h1 class="text-2xl font-sans font-medium text-gray-900 mb-3">Order Not Found</h1>
+            <p class="text-gray-500 mb-8 max-w-md mx-auto">We couldn't find an order with ID <strong class="font-mono text-gray-700">{{ orderId() }}</strong>. Please check the link and try again.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-3">
+              <a routerLink="/order/history" class="px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium">View My Orders</a>
+              <a routerLink="/products" class="px-6 py-2.5 border border-gray-200 text-gray-700 bg-white rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">Browse Store</a>
+            </div>
+          </div>
+        </div>
+      } @else {
       <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
         <!-- Header -->
         <div class="px-6 py-8 border-b border-gray-100 text-center" 
@@ -54,6 +69,19 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
                 <span class="font-mono text-gray-900 font-medium">{{ tracking()?.trackingId }}</span>
               </div>
             }
+            @if (tracking()?.courierName || liveTracking()?.courierName) {
+              <div class="inline-block bg-white px-3 py-2 rounded-lg border border-blue-200 bg-blue-50/50 shadow-sm">
+                <mat-icon class="text-blue-500 text-sm align-middle mr-1.5 inline">local_shipping</mat-icon>
+                <span class="font-sans text-blue-800 font-medium text-sm">{{ liveTracking()?.courierName || tracking()?.courierName }}</span>
+              </div>
+            }
+            @if (liveTracking()?.estimatedDelivery && liveTracking()?.currentStatus !== 'DELIVERED') {
+              <div class="w-full mt-4">
+                <span class="inline-block bg-green-50 text-green-700 px-4 py-1.5 rounded-full text-sm font-medium border border-green-100">
+                  Est. Delivery: {{ liveTracking()?.estimatedDelivery | date:'mediumDate' }}
+                </span>
+              </div>
+            }
           </div>
         </div>
 
@@ -91,23 +119,47 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
                 <div class="absolute left-6 top-4 bottom-4 w-0.5 bg-gray-200"></div>
 
                 <div class="space-y-8 relative">
-                  @for (step of resolvedSteps(); track step.key; let i = $index) {
-                    <div class="flex items-start" [class.opacity-40]="!isStepReached(step.key)">
-                      <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center z-10 shadow-sm"
-                           [class.bg-dv-green]="isStepReached(step.key)"
-                           [class.bg-white]="!isStepReached(step.key)"
-                           [class.border-2]="!isStepReached(step.key)"
-                           [class.border-gray-200]="!isStepReached(step.key)">
-                        <mat-icon [class.text-white]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.icon }}</mat-icon>
+                  @if (liveTracking()?.scans && liveTracking()!.scans.length > 0) {
+                    <!-- Live Shiprocket Scans -->
+                    @for (scan of liveTracking()!.scans; track $index; let first = $first) {
+                      <div class="flex items-start" [class.opacity-60]="!first">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center z-10 shadow-sm border-2 border-white"
+                             [class.bg-dv-green]="first" [class.text-white]="first"
+                             [class.bg-gray-100]="!first" [class.text-gray-500]="!first">
+                          <mat-icon>{{ first ? 'location_on' : 'radio_button_checked' }}</mat-icon>
+                        </div>
+                        <div class="ml-6 pt-2 w-full">
+                          <h3 class="text-base font-medium" [class.text-gray-900]="first" [class.text-gray-600]="!first">{{ scan.activity }}</h3>
+                          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-1">
+                            <p class="text-sm" [class.text-gray-500]="first" [class.text-gray-400]="!first">{{ scan.location }}</p>
+                            <p class="text-xs font-mono text-gray-400 mt-1 sm:mt-0">{{ scan.date | date:'MMM d, h:mm a' }}</p>
+                          </div>
+                          @if (first) {
+                            <span class="text-xs text-dv-green mt-2 block font-medium">● Latest Update</span>
+                          }
+                        </div>
                       </div>
-                      <div class="ml-6 pt-2">
-                        <h3 class="text-lg font-medium" [class.text-gray-900]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.label }}</h3>
-                        <p class="text-sm mt-1" [class.text-gray-500]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.description }}</p>
-                        @if (isCurrentStep(step.key)) {
-                          <span class="text-xs text-dv-green mt-2 block font-medium">● Current Status</span>
-                        }
+                    }
+                  } @else {
+                    <!-- Static Fallback Timeline -->
+                    @for (step of resolvedSteps(); track step.key; let i = $index) {
+                      <div class="flex items-start" [class.opacity-40]="!isStepReached(step.key)">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center z-10 shadow-sm"
+                             [class.bg-dv-green]="isStepReached(step.key)"
+                             [class.bg-white]="!isStepReached(step.key)"
+                             [class.border-2]="!isStepReached(step.key)"
+                             [class.border-gray-200]="!isStepReached(step.key)">
+                          <mat-icon [class.text-white]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.icon }}</mat-icon>
+                        </div>
+                        <div class="ml-6 pt-2">
+                          <h3 class="text-lg font-medium" [class.text-gray-900]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.label }}</h3>
+                          <p class="text-sm mt-1" [class.text-gray-500]="isStepReached(step.key)" [class.text-gray-400]="!isStepReached(step.key)">{{ step.description }}</p>
+                          @if (isCurrentStep(step.key)) {
+                            <span class="text-xs text-dv-green mt-2 block font-medium">● Current Status</span>
+                          }
+                        </div>
                       </div>
-                    </div>
+                    }
                   }
                 </div>
               </div>
@@ -182,6 +234,7 @@ const STATUS_STEPS = ['PENDING', 'PAYMENT_SUCCESS', 'SHIPPED', 'OUT_FOR_DELIVERY
           </a>
         </div>
       </div>
+      }
 
       <!-- Cancel Confirmation Modal -->
       @if (showCancelConfirm()) {
@@ -232,6 +285,9 @@ export class OrderTrackingComponent implements OnInit {
     });
   });
 
+  orderNotFound = signal(false);
+  liveTracking = signal<LiveTrackingResponse | null>(null);
+
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       const id = params.get('id') || '';
@@ -241,8 +297,19 @@ export class OrderTrackingComponent implements OnInit {
           next: (data) => {
             this.tracking.set(data);
             this.loading.set(false);
+            
+            // Try fetching live tracking
+            if (data.trackingId) {
+                this.api.get<LiveTrackingResponse>(`/orders/${id}/live-tracking`).subscribe({
+                    next: (liveData) => this.liveTracking.set(liveData),
+                    error: () => console.log('Could not fetch live tracking data')
+                });
+            }
           },
-          error: () => this.loading.set(false)
+          error: () => {
+            this.orderNotFound.set(true);
+            this.loading.set(false);
+          }
         });
       }
     });

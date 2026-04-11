@@ -15,6 +15,7 @@ export interface OrderResponse {
   paymentStatus: string;
   razorpayOrderId: string;
   trackingId: string;
+  courierName?: string;
   paymentMethod?: string;
   customerName?: string;
   customerEmail?: string;
@@ -35,6 +36,19 @@ export interface OrderResponse {
 
 export interface OrderRequest {
   shippingAddress: string;
+}
+
+export interface ShipmentScan {
+  date: string;
+  activity: string;
+  location: string;
+}
+
+export interface LiveTrackingResponse {
+  courierName: string;
+  currentStatus: string;
+  estimatedDelivery: string;
+  scans: ShipmentScan[];
 }
 
 export interface TrackingResponse {

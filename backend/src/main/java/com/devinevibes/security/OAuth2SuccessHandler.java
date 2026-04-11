@@ -32,9 +32,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
         String email = token.getPrincipal().getAttribute("email");
         String name = token.getPrincipal().getAttribute("name");
-        String picture = token.getPrincipal().getAttribute("picture");
 
-        User user = authService.processGoogleUser(email, name, picture);
+        User user = authService.processGoogleUser(email, name);
         var auth = AuthResponse.of(
                 jwtUtils.generateAccessToken(user.getEmail(), user.getRole().name()),
                 jwtUtils.generateRefreshToken(user.getEmail())

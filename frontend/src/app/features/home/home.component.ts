@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { CategoryService } from '../../core/services/category.service';
+import { Category } from '../../shared/models/category.model';
 
 @Component({
   selector: 'app-home',
@@ -90,44 +92,34 @@ import { MatIconModule } from '@angular/material/icon';
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
-          <!-- Category 1 -->
-          <a routerLink="/products" [queryParams]="{category: 'rudraksha'}" class="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl ring-1 ring-black/5 transition-all duration-500">
-            <div class="aspect-[4/5] overflow-hidden bg-brand-gray relative">
-              <div class="absolute inset-0 bg-brand-dark/20 group-hover:bg-transparent transition-colors z-10 duration-500"></div>
-              <img src="rudraksha-maala.jpg" alt="Rudraksha" referrerpolicy="no-referrer" class="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-700 ease-in-out"/>
-              <div class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-20">
-                <h3 class="text-2xl font-serif text-white mb-2 tracking-wide">Rudraksha Malas</h3>
-                <p class="text-sm text-gray-200 font-light flex items-center gap-2">Explore <mat-icon class="text-[16px]">arrow_forward</mat-icon></p>
+          @for(cat of categories(); track cat.id) {
+            <a routerLink="/products" [queryParams]="{category: cat.slug}" class="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl ring-1 ring-black/5 transition-all duration-500">
+              <div class="aspect-[4/5] overflow-hidden bg-brand-gray relative">
+                <div class="absolute inset-0 bg-brand-dark/20 group-hover:bg-transparent transition-colors z-10 duration-500"></div>
+                @if(cat.imageUrl) {
+                  <img [src]="cat.imageUrl" [alt]="cat.name" referrerpolicy="no-referrer" class="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-700 ease-in-out"/>
+                } @else {
+                  <div class="w-full h-full bg-gradient-to-br from-brand-gold/30 to-brand-green/30"></div>
+                }
+                <div class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-20">
+                  <h3 class="text-2xl font-serif text-white mb-2 tracking-wide">{{ cat.name }}</h3>
+                  <p class="text-sm text-gray-200 font-light flex items-center gap-2">Explore <mat-icon class="text-[16px]">arrow_forward</mat-icon></p>
+                </div>
               </div>
-            </div>
-          </a>
-
-          <!-- Category 2 -->
-          <a routerLink="/products" [queryParams]="{category: 'karungali'}" class="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl ring-1 ring-black/5 transition-all duration-500">
-            <div class="aspect-[4/5] overflow-hidden bg-brand-gray relative">
-              <div class="absolute inset-0 bg-brand-dark/20 group-hover:bg-transparent transition-colors z-10 duration-500"></div>
-              <img src="rudraksha.webp" alt="Karungali" referrerpolicy="no-referrer" class="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-700 ease-in-out"/>
-              <div class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-20">
-                <h3 class="text-2xl font-serif text-white mb-2 tracking-wide">Karungali Wood</h3>
-                <p class="text-sm text-gray-200 font-light flex items-center gap-2">Explore <mat-icon class="text-[16px]">arrow_forward</mat-icon></p>
-              </div>
-            </div>
-          </a>
-
-          <!-- Category 3 -->
-          <a routerLink="/products" [queryParams]="{category: 'bracelets'}" class="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl ring-1 ring-black/5 transition-all duration-500">
-            <div class="aspect-[4/5] overflow-hidden bg-brand-gray relative">
-              <div class="absolute inset-0 bg-brand-dark/20 group-hover:bg-transparent transition-colors z-10 duration-500"></div>
-              <img src="bracelet.webp" alt="Bracelets" referrerpolicy="no-referrer" class="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-700 ease-in-out"/>
-              <div class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-20">
-                <h3 class="text-2xl font-serif text-white mb-2 tracking-wide">Sacred Bracelets</h3>
-                <p class="text-sm text-gray-200 font-light flex items-center gap-2">Explore <mat-icon class="text-[16px]">arrow_forward</mat-icon></p>
-              </div>
-            </div>
-          </a>
+            </a>
+          }
         </div>
       </div>
     </section>
   `
 })
-export class HomeComponent {}
+export class HomeComponent implements OnInit {
+  private categoryService = inject(CategoryService);
+  categories = signal<Category[]>([]);
+
+  ngOnInit() {
+    this.categoryService.getCategories().subscribe({
+      next: (cats) => this.categories.set(cats)
+    });
+  }
+}

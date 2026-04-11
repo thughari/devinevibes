@@ -52,7 +52,7 @@ public class AuthService {
         String name = (String) payload.get("name");
         String picture = (String) payload.get("picture");
 
-        User user = processGoogleUser(email, name, picture);
+        User user = processGoogleUser(email, name);
         return AuthResponse.of(
                 jwtUtils.generateAccessToken(user.getEmail(), user.getRole().name()),
                 jwtUtils.generateRefreshToken(user.getEmail())
@@ -124,17 +124,15 @@ public class AuthService {
         );
     }
 
-    public User processGoogleUser(String email, String name, String imageUrl) {
+    public User processGoogleUser(String email, String name) {
         return userRepository.findByEmail(email.toLowerCase()).map(existing -> {
             existing.setName(name);
-            if (imageUrl != null) existing.setProfileImageUrl(imageUrl);
             existing.setProvider(AuthProvider.GOOGLE);
             return userRepository.save(existing);
         }).orElseGet(() -> {
             User user = new User();
             user.setEmail(email.toLowerCase());
             user.setName(name);
-            user.setProfileImageUrl(imageUrl);
             user.setProvider(AuthProvider.GOOGLE);
             user.setId(generateUserId());
             return userRepository.save(user);

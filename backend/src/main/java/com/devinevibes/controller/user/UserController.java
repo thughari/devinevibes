@@ -34,14 +34,14 @@ public class UserController {
     public ResponseEntity<UserProfileResponse> me() {
         User user = userService.getByEmail(SecurityUtils.currentPrincipalEmail());
         return ResponseEntity.ok(new UserProfileResponse(user.getId(), user.getName(), user.getEmail(), user.getPhone(),
-                user.getProfileImageUrl(), user.getProvider(), user.getRole(), user.getCreatedAt()));
+                user.getProvider(), user.getRole(), user.getCreatedAt()));
     }
 
     @PutMapping("/me")
     public ResponseEntity<UserProfileResponse> update(@Valid @RequestBody UpdateUserProfileRequest request) {
         User user = userService.updateProfile(SecurityUtils.currentPrincipalEmail(), request);
         return ResponseEntity.ok(new UserProfileResponse(user.getId(), user.getName(), user.getEmail(), user.getPhone(),
-                user.getProfileImageUrl(), user.getProvider(), user.getRole(), user.getCreatedAt()));
+                user.getProvider(), user.getRole(), user.getCreatedAt()));
     }
 
     @GetMapping("/addresses")

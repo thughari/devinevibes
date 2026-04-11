@@ -27,7 +27,6 @@ public class User {
 
     private String password;
 
-    private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
