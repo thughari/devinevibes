@@ -4,7 +4,6 @@ import com.devinevibes.entity.coupon.Coupon;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import java.util.List;
 import java.time.Instant;

@@ -51,7 +51,7 @@ public class CartService {
         }).toList();
     }
 
-    public void updateQuantity(String email, java.util.UUID cartItemId, Integer quantity) {
+    public void updateQuantity(String email, String cartItemId, Integer quantity) {
         if (quantity < 1) {
             throw new BadRequestException("Quantity must be at least 1");
         }
@@ -65,7 +65,7 @@ public class CartService {
         cartRepository.save(item);
     }
 
-    public void remove(String email, java.util.UUID cartItemId) {
+    public void remove(String email, String cartItemId) {
         User user = userService.getByEmail(email);
         CartItem item = cartRepository.findByIdAndUser(cartItemId, user)
                 .orElseThrow(() -> new IllegalArgumentException("Cart item not found"));

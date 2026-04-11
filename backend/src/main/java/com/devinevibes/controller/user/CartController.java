@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/cart")
@@ -35,14 +34,14 @@ public class CartController {
     }
 
     @PutMapping("/{cartItemId}")
-    public ResponseEntity<Void> updateQuantity(@PathVariable UUID cartItemId,
+    public ResponseEntity<Void> updateQuantity(@PathVariable String cartItemId,
                                                @RequestParam @NotNull @Min(1) Integer quantity) {
         cartService.updateQuantity(SecurityUtils.currentPrincipalEmail(), cartItemId, quantity);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{cartItemId}")
-    public ResponseEntity<Void> remove(@PathVariable UUID cartItemId) {
+    public ResponseEntity<Void> remove(@PathVariable String cartItemId) {
         cartService.remove(SecurityUtils.currentPrincipalEmail(), cartItemId);
         return ResponseEntity.noContent().build();
     }

@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
-import java.util.UUID;
 
 @Entity
 @Table(name = "cart_items")
@@ -16,8 +15,14 @@ import java.util.UUID;
 public class CartItem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
+
+    @PrePersist
+    public void prePersist() {
+        if (id == null) {
+            id = java.util.UUID.randomUUID().toString();
+        }
+    }
 
     @ManyToOne(optional = false)
     private User user;

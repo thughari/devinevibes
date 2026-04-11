@@ -46,13 +46,16 @@ public class ShiprocketClient {
         HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
 
         try {
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(url,
+                    org.springframework.http.HttpMethod.POST, entity,
+                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {
+                    });
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 cachedToken = (String) response.getBody().get("token");
                 return cachedToken;
             }
         } catch (Exception e) {
-            System.err.println("Shiprocket authentication failed: " + e.getMessage());
+            log.error("Shiprocket authentication failed: {}", e.getMessage());
             return null;
         }
         return null;
@@ -82,24 +85,42 @@ public class ShiprocketClient {
 
         Map<String, Object> req = new HashMap<>();
         req.put("order_id", order.getId());
-        req.put("order_date", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        req.put("order_date",
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
         req.put("pickup_location", "Home"); // Fix: Must exactly match Shiprocket dashboard location name
 
         // Billing Details
-        req.put("billing_customer_name", order.getShippingFirstName() != null && !order.getShippingFirstName().isBlank() ? order.getShippingFirstName() : "Customer");
+        req.put("billing_customer_name",
+                order.getShippingFirstName() != null && !order.getShippingFirstName().isBlank()
+                        ? order.getShippingFirstName()
+                        : "Customer");
         req.put("billing_last_name", order.getShippingLastName() != null ? order.getShippingLastName() : "");
-        req.put("billing_address", order.getShippingAddress() != null && !order.getShippingAddress().isBlank() ? order.getShippingAddress() : "Default Full Address");
+        req.put("billing_address",
+                order.getShippingAddress() != null && !order.getShippingAddress().isBlank() ? order.getShippingAddress()
+                        : "Default Full Address");
         req.put("billing_address_2", "Near Landmark");
-        req.put("billing_city", order.getShippingCity() != null && !order.getShippingCity().isBlank() ? order.getShippingCity() : "City");
-        req.put("billing_pincode", order.getShippingPostalCode() != null && !order.getShippingPostalCode().isBlank() ? order.getShippingPostalCode() : "110001");
-        req.put("billing_state", order.getShippingState() != null && !order.getShippingState().isBlank() ? order.getShippingState() : "State");
+        req.put("billing_city",
+                order.getShippingCity() != null && !order.getShippingCity().isBlank() ? order.getShippingCity()
+                        : "City");
+        req.put("billing_pincode",
+                order.getShippingPostalCode() != null && !order.getShippingPostalCode().isBlank()
+                        ? order.getShippingPostalCode()
+                        : "110001");
+        req.put("billing_state",
+                order.getShippingState() != null && !order.getShippingState().isBlank() ? order.getShippingState()
+                        : "State");
         req.put("billing_country", "India");
-        req.put("billing_email", order.getShippingEmail() != null && !order.getShippingEmail().isBlank() ? order.getShippingEmail() : "email@example.com");
-        req.put("billing_phone", order.getShippingPhone() != null && !order.getShippingPhone().isBlank() ? order.getShippingPhone() : "9999999999");
-        
+        req.put("billing_email",
+                order.getShippingEmail() != null && !order.getShippingEmail().isBlank() ? order.getShippingEmail()
+                        : "email@example.com");
+        req.put("billing_phone",
+                order.getShippingPhone() != null && !order.getShippingPhone().isBlank() ? order.getShippingPhone()
+                        : "9999999999");
+
         req.put("shipping_is_billing", true);
 
-        // Shipping Details (Duplicated to absolutely ensure Shiprocket validation passes)
+        // Shipping Details (Duplicated to absolutely ensure Shiprocket validation
+        // passes)
         req.put("shipping_customer_name", req.get("billing_customer_name"));
         req.put("shipping_last_name", req.get("billing_last_name"));
         req.put("shipping_address", req.get("billing_address"));
@@ -122,11 +143,14 @@ public class ShiprocketClient {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(req, headers);
         try {
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(url,
+                    org.springframework.http.HttpMethod.POST, entity,
+                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {
+                    });
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> body = response.getBody();
                 System.out.println("SHIPROCKET SUCCESS RESPONSE: " + body);
-                
+
                 Object orderIdFromRes = body.get("order_id");
                 Object shipmentId = body.get("shipment_id");
                 Object awb = body.get("awb_code");
@@ -162,19 +186,20 @@ public class ShiprocketClient {
     }
 
     public void cancelOrder(String shiprocketOrderId) {
-        if (shiprocketOrderId == null || "ERROR".equals(shiprocketOrderId)) return;
-        
+        if (shiprocketOrderId == null || "ERROR".equals(shiprocketOrderId))
+            return;
+
         try {
             String token = getToken();
             String url = baseUrl + "/v1/external/orders/cancel";
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(token);
-            
+
             Map<String, Object> body = Map.of("ids", java.util.List.of(shiprocketOrderId));
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-            
+
             restTemplate.postForEntity(url, entity, String.class);
             log.info("Shiprocket order cancelled success: {}", shiprocketOrderId);
         } catch (Exception e) {
@@ -188,7 +213,8 @@ public class ShiprocketClient {
         }
         try {
             String token = getToken();
-            if (token == null) return new com.devinevibes.dto.order.LiveTrackingResponse(null, null, null, Collections.emptyList());
+            if (token == null)
+                return new com.devinevibes.dto.order.LiveTrackingResponse(null, null, null, Collections.emptyList());
 
             String url = baseUrl + "/v1/external/courier/track/awb/" + awb;
             HttpHeaders headers = new HttpHeaders();
@@ -197,13 +223,14 @@ public class ShiprocketClient {
 
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     url, org.springframework.http.HttpMethod.GET, entity,
-                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
+                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {
+                    });
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> body = response.getBody();
                 if (body.get("tracking_data") instanceof Map) {
                     Map<String, Object> tData = (Map<String, Object>) body.get("tracking_data");
-                    
+
                     Integer trackStatus = (Integer) tData.get("track_status");
                     if (trackStatus != null && trackStatus == 1) {
                         String currentStatus = (String) tData.get("shipment_status");
@@ -212,7 +239,8 @@ public class ShiprocketClient {
 
                         List<com.devinevibes.dto.order.ShipmentScanDto> scanList = new ArrayList<>();
                         if (tData.get("track_url") != null && tData.get("shipment_track_activities") != null) {
-                            List<Map<String, Object>> activities = (List<Map<String, Object>>) tData.get("shipment_track_activities");
+                            List<Map<String, Object>> activities = (List<Map<String, Object>>) tData
+                                    .get("shipment_track_activities");
                             for (Map<String, Object> act : activities) {
                                 String date = (String) act.get("date");
                                 String activity = (String) act.get("activity");
@@ -220,7 +248,8 @@ public class ShiprocketClient {
                                 scanList.add(new com.devinevibes.dto.order.ShipmentScanDto(date, activity, location));
                             }
                         }
-                        return new com.devinevibes.dto.order.LiveTrackingResponse(courierName, currentStatus, etd, scanList);
+                        return new com.devinevibes.dto.order.LiveTrackingResponse(courierName, currentStatus, etd,
+                                scanList);
                     }
                 }
             }
