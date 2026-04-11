@@ -1,7 +1,9 @@
 import { Component, inject, signal, afterNextRender, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe, TitleCasePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
+import { ConfirmService } from '../../../shared/services/confirm.service';
 import { ApiService } from '../../../core/services/api.service';
 import { ProductResponse } from '../../../shared/models/product.model';
 import { OrderResponse, PageResponse } from '../../../shared/models/order.model';
@@ -17,7 +19,7 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, MatIconModule, ReactiveFormsModule, TitleCasePipe],
+  imports: [CommonModule, MatIconModule, ReactiveFormsModule, MatDialogModule],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
@@ -1022,37 +1024,15 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
           </div>
         }
       </div>
-      
-      <!-- Delete Confirmation Modal -->
-      @if (deleteConfirm()) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div class="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl transform transition-all">
-            <div class="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mb-5 mx-auto shadow-inner">
-              <mat-icon class="text-red-500 w-8 h-8 text-[32px] flex items-center justify-center">warning_amber</mat-icon>
-            </div>
-            <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Delete {{ deleteConfirm()?.type | titlecase }}?</h3>
-            <p class="text-sm text-gray-500 text-center mb-6">Are you sure you want to delete <strong class="text-gray-800 font-semibold">{{ deleteConfirm()?.name }}</strong>? This action cannot be undone.</p>
-            @if (deleteConfirm()?.type === 'category' && getAttachedProductsCount() > 0) {
-              <div class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl mb-6 text-sm font-medium flex items-start gap-3 shadow-inner text-left mx-auto max-w-[90%]">
-                <mat-icon class="text-amber-600 text-[20px] shrink-0 mt-0.5">info</mat-icon>
-                <span>Warning: This category has <strong>{{ getAttachedProductsCount() }}</strong> products attached. Deleting it will automatically move them to "Uncategorized", allowing you to safely reassign them later.</span>
-              </div>
-            }
-            <div class="flex gap-3">
-              <button (click)="deleteConfirm.set(null)" class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-medium transition-colors">Cancel</button>
-              <button (click)="executeDelete()" class="flex-1 px-4 py-2.5 bg-red-600 text-white hover:bg-red-700 rounded-xl font-medium transition-colors shadow-md shadow-red-500/20">Delete</button>
-            </div>
-          </div>
-        </div>
-      }
     </div>
-  `
+  `,
 })
 export class AdminDashboardComponent {
   private api = inject(ApiService);
   private snackbar = inject(SnackbarService);
   private fb = inject(FormBuilder);
   private categoryService = inject(CategoryService);
+  private confirmService = inject(ConfirmService);
 
   activeTab = signal<'products' | 'orders' | 'coupons' | 'settings' | 'analytics' | 'categories' | 'banners'>('analytics');
   expandedOrderId = signal<string | null>(null);
@@ -1105,7 +1085,6 @@ export class AdminDashboardComponent {
     expiryDate: [null as string | null]
   });
 
-  deleteConfirm = signal<{ type: 'product' | 'coupon' | 'category' | 'banner', id: string, name: string } | null>(null);
   products = signal<ProductResponse[]>([]);
   ordersPage = signal<PageResponse<OrderResponse> | null>(null);
   ordersSearch = signal<string>('');
@@ -1378,51 +1357,60 @@ export class AdminDashboardComponent {
   }
 
   confirmDelete(type: 'product' | 'coupon' | 'category' | 'banner', id: string, name: string) {
-    this.deleteConfirm.set({ type, id, name });
-  }
-
-  getAttachedProductsCount(): number {
-    const target = this.deleteConfirm();
-    if (target?.type !== 'category') return 0;
-    return this.products().filter(p => p.categoryId === target.id).length;
-  }
-
-  executeDelete() {
-    const target = this.deleteConfirm();
-    if (!target) return;
+    const message = `Are you sure you want to delete "${name}"?`;
+    let warning = '';
     
-    if (target.type === 'product') {
-      this.api.delete<void>(`/admin/products/${target.id}`).subscribe({ 
+    if (type === 'category') {
+      const count = this.products().filter(p => p.categoryId === id).length;
+      if (count > 0) {
+        warning = `This category has ${count} products. They will be reassigned to "Uncategorized".`;
+      }
+    }
+
+    this.confirmService.confirm({
+      title: `Delete ${type.charAt(0).toUpperCase() + type.slice(1)}?`,
+      message: message,
+      warning: warning,
+      confirmText: 'Delete',
+      isDestructive: true
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.executeDelete(type, id);
+      }
+    });
+  }
+
+  private executeDelete(type: string, id: string) {
+    if (type === 'product') {
+      this.api.delete<void>(`/admin/products/${id}`).subscribe({ 
         next: () => {
-          this.products.update(items => items.filter(p => p.id !== target.id));
-          this.deleteConfirm.set(null);
+          this.products.update(items => items.filter(p => p.id !== id));
           this.snackbar.showSuccess('Product deleted successfully');
         },
         error: () => this.snackbar.showError('Unable to delete product')
       });
-    } else if (target.type === 'coupon') {
-      this.api.delete<void>(`/admin/coupons/${target.id}`).subscribe({
+    } else if (type === 'coupon') {
+      this.api.delete<void>(`/admin/coupons/${id}`).subscribe({
         next: () => {
-          this.coupons.update(list => list.filter(c => c.id !== target.id));
-          this.deleteConfirm.set(null);
+          this.coupons.update(list => list.filter(c => c.id !== id));
           this.snackbar.showSuccess('Coupon deleted successfully');
         },
         error: () => this.snackbar.showError('Unable to delete coupon')
       });
-    } else if (target.type === 'category') {
-      this.categoryService.deleteCategory(target.id).subscribe({
+    } else if (type === 'category') {
+      this.categoryService.deleteCategory(id).subscribe({
         next: () => {
-          this.categories.update(list => list.filter(c => c.id !== target.id));
-          this.deleteConfirm.set(null);
+          this.categories.update(list => list.filter(c => c.id !== id));
           this.snackbar.showSuccess('Category deleted successfully');
+          // Update local product collection since their category ID changed to UNCATEGORIZED on backend
+          this.loadDashboardData(); 
         },
         error: () => this.snackbar.showError('Unable to delete category. Ensure it has no products.')
       });
-    } else if (target.type === 'banner') {
-      this.api.delete<void>(`/admin/banners/${target.id}`).subscribe({
+    } else if (type === 'banner') {
+      this.api.delete<void>(`/admin/banners/${id}`).subscribe({
         next: () => {
-          this.banners.update(list => list.filter(b => b.id !== target.id));
-          this.deleteConfirm.set(null);
+          this.banners.update(list => list.filter(b => b.id !== id));
           this.snackbar.showSuccess('Banner deleted');
         },
         error: () => this.snackbar.showError('Failed to delete banner')

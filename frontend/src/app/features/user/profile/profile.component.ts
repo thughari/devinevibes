@@ -5,11 +5,13 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../../core/services/api.service';
 import { AddressResponse, UserProfileResponse } from '../../../shared/models/user.model';
+import { ConfirmService } from '../../../shared/services/confirm.service';
+import { MatDialogModule } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [ReactiveFormsModule, MatIconModule],
+  imports: [ReactiveFormsModule, MatIconModule, MatDialogModule],
   template: `
     <section class="max-w-3xl mx-auto px-4 py-8 sm:py-12">
       <div class="flex justify-between items-center mb-6">
@@ -121,6 +123,7 @@ export class ProfileComponent {
   private api = inject(ApiService);
   private fb = inject(FormBuilder);
   private snackbar = inject(SnackbarService);
+  private confirmService = inject(ConfirmService);
   addresses: AddressResponse[] = [];
   editingAddressId: string | null = null;
   showAddressForm = signal(false);
@@ -235,12 +238,19 @@ export class ProfileComponent {
   }
 
   deleteAddress(id: string) {
-    this.api.delete<void>(`/user/addresses/${id}`).subscribe({
-      next: () => {
-        this.snackbar.showInfo('Address removed');
-        this.loadAddresses();
-      },
-      error: () => this.snackbar.showError('Unable to delete address')
+    const address = this.addresses.find(a => a.id === id);
+    const label = address?.label || 'this address';
+    
+    this.confirmService.confirmDelete(label, 'Address').subscribe(confirmed => {
+      if (confirmed) {
+        this.api.delete<void>(`/user/addresses/${id}`).subscribe({
+          next: () => {
+            this.snackbar.showInfo('Address removed');
+            this.loadAddresses();
+          },
+          error: () => this.snackbar.showError('Unable to delete address')
+        });
+      }
     });
   }
 

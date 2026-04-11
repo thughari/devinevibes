@@ -5,11 +5,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { CartService } from '../../core/services/cart.service';
 import { SnackbarService } from '../../shared/services/snackbar.service';
+import { ConfirmService } from '../../shared/services/confirm.service';
+import { MatDialogModule } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-wishlist',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, RouterLink, MatIconModule],
+  imports: [CommonModule, CurrencyPipe, RouterLink, MatIconModule, MatDialogModule],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
       <div class="text-center mb-16">
@@ -32,7 +34,7 @@ import { SnackbarService } from '../../shared/services/snackbar.service';
                 
                 <!-- Remove Action -->
                 <button 
-                  (click)="wishlist.toggle(product)"
+                  (click)="removeItem(product)"
                   class="absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur-md rounded-full text-red-500 shadow-sm hover:bg-red-50 transition-colors z-20"
                   title="Remove from Wishlist"
                 >
@@ -114,6 +116,7 @@ export class WishlistComponent {
   wishlist = inject(WishlistService);
   cart = inject(CartService);
   snackbar = inject(SnackbarService);
+  private confirmService = inject(ConfirmService);
 
   addToCart(product: any) {
     this.cart.addToCart({
@@ -124,5 +127,19 @@ export class WishlistComponent {
       imageUrl: product.imageUrl
     }, 1);
     this.snackbar.showSuccess(`${product.name} added to bag`);
+  }
+
+  removeItem(product: any) {
+    this.confirmService.confirm({
+      title: 'Remove from Wishlist?',
+      message: `Are you sure you want to remove ${product.name} from your wishlist?`,
+      confirmText: 'Remove',
+      isDestructive: true
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.wishlist.toggle(product);
+        this.snackbar.showInfo('Removed from wishlist');
+      }
+    });
   }
 }
