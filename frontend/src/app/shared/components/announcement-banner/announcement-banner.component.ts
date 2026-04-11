@@ -17,7 +17,7 @@ import { RouterLink } from '@angular/router';
           <div class="flex-1 flex items-center justify-center gap-4 text-xs sm:text-sm font-medium">
             <span class="flex items-center gap-2">
               <span class="animate-pulse">✨</span>
-              {{ activeBanner()?.content }}
+              <span [innerHTML]="activeBanner()?.content"></span>
             </span>
             
             @if (countdownText()) {
