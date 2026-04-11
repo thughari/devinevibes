@@ -1,5 +1,5 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, OnInit, OnDestroy, computed, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ApiService } from '../../../core/services/api.service';
 import { Banner } from '../../../shared/models/banner.model';
 import { RouterLink } from '@angular/router';
@@ -58,6 +58,7 @@ import { RouterLink } from '@angular/router';
 })
 export class AnnouncementBannerComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  private platformId = inject(PLATFORM_ID);
   
   banners = signal<Banner[]>([]);
   currentIndex = signal(0);
@@ -95,9 +96,11 @@ export class AnnouncementBannerComponent implements OnInit, OnDestroy {
   }
 
   private loadDismissed() {
-    const saved = localStorage.getItem('dismissed_banners');
-    if (saved) {
-      this.dismissedIds.set(new Set(JSON.parse(saved)));
+    if (isPlatformBrowser(this.platformId)) {
+      const saved = localStorage.getItem('dismissed_banners');
+      if (saved) {
+        this.dismissedIds.set(new Set(JSON.parse(saved)));
+      }
     }
   }
 
@@ -107,7 +110,9 @@ export class AnnouncementBannerComponent implements OnInit, OnDestroy {
       const current = new Set(this.dismissedIds());
       current.add(banner.id);
       this.dismissedIds.set(current);
-      localStorage.setItem('dismissed_banners', JSON.stringify(Array.from(current)));
+      if (isPlatformBrowser(this.platformId)) {
+        localStorage.setItem('dismissed_banners', JSON.stringify(Array.from(current)));
+      }
     }
   }
 
