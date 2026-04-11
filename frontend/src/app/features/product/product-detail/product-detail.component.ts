@@ -6,6 +6,7 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { CurrencyPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { CartService } from '../../../core/services/cart.service';
+import { WishlistService } from '../../../core/services/wishlist.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -114,10 +115,13 @@ import { CartService } from '../../../core/services/cart.service';
                   Add to Bag
                 </button>
                 <button 
-                  class="w-full sm:w-auto border border-brand-green text-brand-green py-4 px-6 rounded-sm hover:bg-brand-green/5 transition-colors flex items-center justify-center"
-                  title="Add to Wishlist"
+                  (click)="toggleWishlist()"
+                  class="w-full sm:w-auto border border-brand-green text-brand-green py-4 px-6 rounded-sm hover:bg-brand-green/5 transition-colors flex items-center justify-center group"
+                  [class.bg-brand-green]="isInWishlist()"
+                  [class.text-white]="isInWishlist()"
+                  [title]="isInWishlist() ? 'Remove from Wishlist' : 'Add to Wishlist'"
                 >
-                  <mat-icon>favorite_border</mat-icon>
+                  <mat-icon>{{ isInWishlist() ? 'favorite' : 'favorite_border' }}</mat-icon>
                 </button>
               </div>
             </div>
@@ -171,11 +175,17 @@ export class ProductDetailComponent implements OnInit {
   private api = inject(ApiService);
   private snackbar = inject(SnackbarService);
   private cartService = inject(CartService);
+  private wishlistService = inject(WishlistService);
 
   product = signal<ProductResponse | null>(null);
   isLoading = signal(true);
   quantity = signal(1);
   selectedMedia = signal<string | null>(null);
+
+  isInWishlist = computed(() => {
+    const prod = this.product();
+    return prod ? this.wishlistService.isInWishlist(prod.id) : false;
+  });
 
   allGalleryImages = computed(() => {
     const prod = this.product();
@@ -241,5 +251,17 @@ export class ProductDetailComponent implements OnInit {
 
   setSelectedMedia(url: string) {
     this.selectedMedia.set(url);
+  }
+
+  toggleWishlist() {
+    const prod = this.product();
+    if (prod) {
+      this.wishlistService.toggle(prod);
+      if (this.wishlistService.isInWishlist(prod.id)) {
+        this.snackbar.showSuccess(`${prod.name} added to wishlist`);
+      } else {
+        this.snackbar.showInfo(`${prod.name} removed from wishlist`);
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatIconModule } from '@angular/material/icon';
 import { CartService } from '../../../core/services/cart.service';
+import { WishlistService } from '../../../core/services/wishlist.service';
 
 @Component({
   selector: 'app-navbar',
@@ -34,6 +35,15 @@ import { CartService } from '../../../core/services/cart.service';
 
           <!-- Actions -->
           <div class="flex items-center space-x-4 sm:space-x-8">
+            <a routerLink="/wishlist" class="flex items-center text-brand-dark hover:text-brand-gold transition-colors group">
+              <div class="relative">
+                <mat-icon class="text-brand-green group-hover:text-brand-gold transition-colors duration-300">favorite_border</mat-icon>
+                @if (wishlist.count() > 0) {
+                  <span class="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold h-[18px] w-[18px] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">{{ wishlist.count() }}</span>
+                }
+              </div>
+            </a>
+
             <a routerLink="/cart" class="flex items-center text-brand-dark hover:text-brand-gold transition-colors group">
               <span class="font-medium mr-2 text-xs sm:text-sm tracking-wide hidden sm:block">{{ cart.count() }} items</span>
               <div class="relative">
@@ -107,5 +117,6 @@ import { CartService } from '../../../core/services/cart.service';
 export class NavbarComponent {
   auth = inject(AuthService);
   cart = inject(CartService);
+  wishlist = inject(WishlistService);
   mobileMenuOpen = signal(false);
 }

@@ -1,8 +1,8 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { ApiService } from '../../../core/services/api.service';
 import { ProductResponse } from '../../../shared/models/product.model';
 import { ProductCardComponent } from '../../../shared/components/product-card/product-card.component';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpParams } from '@angular/common/http';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
 import { MatIconModule } from '@angular/material/icon';
@@ -140,6 +140,7 @@ import { FormsModule } from '@angular/forms';
 export class ProductListComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private snackbar = inject(SnackbarService);
   private cartService = inject(CartService);
 
@@ -149,6 +150,7 @@ export class ProductListComponent implements OnInit {
   isLoading = signal(true);
   category = signal<string | null>(null);
   selectedCategoryId = signal<string | null>(null);
+  pendingSlug = signal<string | null>(null);
   sortBy = signal<'popularity' | 'price_asc' | 'price_desc' | 'newest'>('popularity');
 
   // Filter state
@@ -161,7 +163,10 @@ export class ProductListComponent implements OnInit {
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
       if (params['category']) {
-        this.selectedCategoryId.set(params['category']);
+        this.pendingSlug.set(params['category']);
+      } else {
+        this.selectedCategoryId.set(null);
+        this.pendingSlug.set(null);
       }
       this.fetchProducts();
       this.fetchCategories();
@@ -169,7 +174,18 @@ export class ProductListComponent implements OnInit {
   }
 
   fetchCategories() {
-    this.categoryService.getCategories().subscribe(cats => this.categories.set(cats));
+    this.categoryService.getCategories().subscribe((cats: Category[]) => {
+      this.categories.set(cats);
+      
+      const slug = this.pendingSlug();
+      if (slug) {
+        const match = cats.find((c: Category) => c.slug === slug);
+        if (match) {
+          this.selectedCategoryId.set(match.id);
+          this.onFilterChange();
+        }
+      }
+    });
   }
 
   onFilterChange() {
@@ -203,6 +219,15 @@ export class ProductListComponent implements OnInit {
   }
 
   selectCategory(id: string | null) {
+    const cat = this.categories().find(c => c.id === id);
+    const slug = cat ? cat.slug : null;
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { category: slug },
+      queryParamsHandling: 'merge'
+    });
+
     this.selectedCategoryId.set(id);
     this.onFilterChange();
   }
