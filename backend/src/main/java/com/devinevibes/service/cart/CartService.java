@@ -26,6 +26,7 @@ public class CartService {
         this.productService = productService;
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value = "carts#1h", key = "#email")
     public void add(String email, AddToCartRequest request) {
         User user = userService.getByEmail(email);
         var product = productService.fetchEntity(request.productId());
@@ -42,6 +43,7 @@ public class CartService {
         cartRepository.save(item);
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "carts#1h", key = "#email")
     public List<CartItemResponse> get(String email) {
         User user = userService.getByEmail(email);
         return cartRepository.findByUser(user).stream().map(item -> {
@@ -51,6 +53,7 @@ public class CartService {
         }).toList();
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value = "carts#1h", key = "#email")
     public void updateQuantity(String email, String cartItemId, Integer quantity) {
         if (quantity < 1) {
             throw new BadRequestException("Quantity must be at least 1");
@@ -65,6 +68,7 @@ public class CartService {
         cartRepository.save(item);
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value = "carts#1h", key = "#email")
     public void remove(String email, String cartItemId) {
         User user = userService.getByEmail(email);
         CartItem item = cartRepository.findByIdAndUser(cartItemId, user)
@@ -72,10 +76,12 @@ public class CartService {
         cartRepository.delete(item);
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "carts#1h", key = "#email")
     public List<CartItem> fetchItems(String email) {
         return cartRepository.findByUser(userService.getByEmail(email));
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value = "carts#1h", key = "#email")
     public void clear(String email) {
         cartRepository.deleteByUser(userService.getByEmail(email));
     }

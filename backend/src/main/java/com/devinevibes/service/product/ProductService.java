@@ -30,18 +30,18 @@ public class ProductService {
         this.categoryService = categoryService;
     }
 
-    @org.springframework.cache.annotation.Cacheable(value = "products", key = "'all'")
+    @org.springframework.cache.annotation.Cacheable(value = "products#24h", key = "'all'")
     public List<ProductResponse> getAll() {
         return productRepository.findAll().stream().map(this::map).toList();
     }
 
-    @org.springframework.cache.annotation.Cacheable(value = "products", key = "#id")
+    @org.springframework.cache.annotation.Cacheable(value = "products#24h", key = "#id")
     public ProductResponse getById(String id) {
         return map(fetchEntity(id));
     }
 
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(value = "products", allEntries = true)
+    @org.springframework.cache.annotation.CacheEvict(value = "products#24h", allEntries = true)
     public ProductResponse create(CreateProductRequest request) {
         Product product = new Product();
         product.setName(request.name());
@@ -72,7 +72,7 @@ public class ProductService {
     }
 
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(value = "products", allEntries = true)
+    @org.springframework.cache.annotation.CacheEvict(value = "products#24h", allEntries = true)
     public ProductResponse update(String id, CreateProductRequest request) {
         Product p = fetchEntity(id);
 
@@ -116,7 +116,7 @@ public class ProductService {
     }
 
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(value = "products", allEntries = true)
+    @org.springframework.cache.annotation.CacheEvict(value = "products#24h", allEntries = true)
     public void delete(String id) {
         Product p = fetchEntity(id);
         
@@ -130,6 +130,7 @@ public class ProductService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = {"products#24h", "admin_analytics#5m"}, allEntries = true)
     public void incrementSalesCount(Product product, int quantity) {
         if (product != null) {
             long current = product.getSalesCount() != null ? product.getSalesCount() : 0L;
@@ -143,6 +144,7 @@ public class ProductService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "products#24h", allEntries = true)
     public Product reserveStock(Product p, int quantity) {
         // Essential for rock-solid concurrency (SELECT FOR UPDATE)
         Product product = productRepository.findByIdWithLock(p.getId())
@@ -156,6 +158,7 @@ public class ProductService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "products#24h", allEntries = true)
     public void releaseStock(Product p, int quantity) {
         Product product = productRepository.findByIdWithLock(p.getId())
                 .orElseThrow(() -> new ProductNotFoundException("Product for release not found"));

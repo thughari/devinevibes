@@ -66,6 +66,10 @@ public class OrderService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(
+        value = {"user_orders#1h", "carts#1h", "admin_orders#1m", "admin_analytics#5m"}, 
+        allEntries = true
+    )
     public OrderResponse createOrder(String email, OrderRequest request) {
         // Throttling: Prevent multiple PENDING orders from the same user in 60s
         Instant oneMinuteAgo = Instant.now().minus(60, ChronoUnit.SECONDS);
@@ -261,12 +265,14 @@ public class OrderService {
         return map(saved);
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "user_orders#1h", key = "#email")
     public List<OrderResponse> getMyOrders(String email) {
         return orderRepository.findByUser(userService.getByEmail(email)).stream()
                 .sorted(java.util.Comparator.comparing(Order::getCreatedAt).reversed())
                 .map(this::map).toList();
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "admin_orders#1m", key = "{#pageable.pageNumber, #pageable.pageSize, #search, #status}")
     public PageResponse<OrderResponse> getAllOrders(Pageable pageable, String search, OrderStatus status) {
         Specification<Order> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -312,6 +318,10 @@ public class OrderService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(
+        value = {"user_orders#1h", "admin_orders#1m", "admin_analytics#5m"}, 
+        allEntries = true
+    )
     public void markPaymentSuccess(String razorpayOrderId, String razorpayPaymentId) {
         if (razorpayOrderId == null || razorpayOrderId.isBlank()) {
             log.warn("Attempted to mark payment success with null/empty Razorpay Order ID. Payment ID: {}", razorpayPaymentId);
@@ -344,6 +354,10 @@ public class OrderService {
     }
     
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(
+        value = {"user_orders#1h", "admin_orders#1m", "admin_analytics#5m"}, 
+        allEntries = true
+    )
     public void cancelOrder(String email, String orderId) {
         Order order = findOwnedOrder(email, orderId);
         
@@ -402,6 +416,10 @@ public class OrderService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(
+        value = {"user_orders#1h", "admin_orders#1m", "admin_analytics#5m"}, 
+        allEntries = true
+    )
     public void updateLogisticsStatus(String trackingId, OrderStatus newStatus, String courierName) {
         if (trackingId == null || trackingId.isBlank()) {
             log.warn("Ignoring logistics update with blank tracking ID");

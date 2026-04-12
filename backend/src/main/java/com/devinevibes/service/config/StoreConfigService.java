@@ -30,14 +30,14 @@ public class StoreConfigService {
     }
 
     @Transactional(readOnly = true)
-    @org.springframework.cache.annotation.Cacheable(value = "config", key = "'current'")
+    @org.springframework.cache.annotation.Cacheable(value = "config#30d", key = "'current'")
     public StoreConfigResponse getConfig() {
         StoreConfig config = getConfigEntity();
         return new StoreConfigResponse(config.getFreeShippingThreshold(), config.getStandardShippingCost(), config.getCodFee(), config.getCancellationWindowHours());
     }
 
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(value = "config", allEntries = true)
+    @org.springframework.cache.annotation.CacheEvict(value = "config#30d", allEntries = true)
     public StoreConfigResponse updateConfig(UpdateStoreConfigRequest request) {
         StoreConfig config = getConfigEntity();
         config.setFreeShippingThreshold(request.freeShippingThreshold());

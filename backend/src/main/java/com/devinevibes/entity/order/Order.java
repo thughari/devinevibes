@@ -23,6 +23,7 @@ public class Order {
     private User user;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @org.hibernate.annotations.BatchSize(size = 20)
     private List<OrderItem> items = new ArrayList<>();
 
     @Column(nullable = false)

@@ -19,18 +19,19 @@ public class BannerService {
 
     private final BannerRepository bannerRepository;
 
-    @Cacheable(value = "banners", key = "'active'")
+    @Cacheable(value = "banners#7d", key = "'active'")
     public List<BannerResponse> getActiveBanners() {
         return bannerRepository.findByActiveTrueOrderByPriorityDesc().stream()
                 .map(this::map).toList();
     }
 
+    @Cacheable(value = "banners#7d", key = "'all'")
     public List<BannerResponse> getAll() {
         return bannerRepository.findAll().stream().map(this::map).toList();
     }
 
     @Transactional
-    @CacheEvict(value = "banners", allEntries = true)
+    @CacheEvict(value = "banners#7d", allEntries = true)
     public BannerResponse create(BannerRequest request) {
         Banner banner = new Banner();
         updateEntity(banner, request);
@@ -38,7 +39,7 @@ public class BannerService {
     }
 
     @Transactional
-    @CacheEvict(value = "banners", allEntries = true)
+    @CacheEvict(value = "banners#7d", allEntries = true)
     public BannerResponse update(UUID id, BannerRequest request) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Banner not found"));
@@ -47,7 +48,7 @@ public class BannerService {
     }
 
     @Transactional
-    @CacheEvict(value = "banners", allEntries = true)
+    @CacheEvict(value = "banners#7d", allEntries = true)
     public void delete(UUID id) {
         bannerRepository.deleteById(id);
     }

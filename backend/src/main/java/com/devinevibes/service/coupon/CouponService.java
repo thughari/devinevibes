@@ -21,6 +21,7 @@ public class CouponService {
         this.orderRepository = orderRepository;
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value = "admin_coupons#5m", allEntries = true)
     public CouponResponse create(CreateCouponRequest request) {
         Coupon coupon = new Coupon();
         coupon.setCode(request.code().trim().toUpperCase());
@@ -37,6 +38,7 @@ public class CouponService {
         return map(couponRepository.save(coupon));
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value = "admin_coupons#5m", allEntries = true)
     public CouponResponse update(String id, CreateCouponRequest request) {
         Coupon coupon = couponRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Coupon not found"));
@@ -54,6 +56,7 @@ public class CouponService {
         return map(couponRepository.save(coupon));
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "admin_coupons#5m")
     public List<CouponResponse> list() {
         return couponRepository.findAll().stream().map(this::map).toList();
     }
@@ -68,6 +71,7 @@ public class CouponService {
                 .toList();
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value = "admin_coupons#5m", allEntries = true)
     public void delete(String id) {
         couponRepository.deleteById(id);
     }

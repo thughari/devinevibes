@@ -25,7 +25,9 @@ public class AnalyticsService {
         this.orderRepository = orderRepository;
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "admin_analytics#5m")
     public AnalyticsResponse getAnalytics() {
+
         List<Order> orders = orderRepository.findAll().stream()
                 .filter(o -> o.getOrderStatus() != OrderStatus.CANCELLED)
                 .filter(o -> com.devinevibes.entity.order.PaymentStatus.SUCCESS.equals(o.getPaymentStatus()) 

@@ -13,6 +13,13 @@ import java.time.Instant;
 
 public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecificationExecutor<Order> {
 
+    @Override
+    List<Order> findAll();
+
+    @Override
+    org.springframework.data.domain.Page<Order> findAll(org.springframework.data.jpa.domain.Specification<Order> spec, org.springframework.data.domain.Pageable pageable);
+
+
     @EntityGraph(attributePaths = { "items", "user" })
     List<Order> findByUser(User user);
 

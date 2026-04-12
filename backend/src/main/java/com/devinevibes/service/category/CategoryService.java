@@ -16,11 +16,12 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
 
+    @org.springframework.cache.annotation.Cacheable(value = "categories#7d", key = "'all'")
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }
 
-    @org.springframework.cache.annotation.Cacheable(value = "categories", key = "'active'")
+    @org.springframework.cache.annotation.Cacheable(value = "categories#7d", key = "'active'")
     public List<Category> getActiveCategories() {
         return categoryRepository.findAll().stream()
                 .filter(Category::isActive)
@@ -33,7 +34,7 @@ public class CategoryService {
     }
 
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(value = "categories", allEntries = true)
+    @org.springframework.cache.annotation.CacheEvict(value = "categories#7d", allEntries = true)
     public Category createCategory(Category category) {
         if (category.getSlug() == null || category.getSlug().isBlank()) {
             category.setSlug(category.getName().toLowerCase().replaceAll("[^a-z0-9]", "-"));
@@ -44,7 +45,7 @@ public class CategoryService {
     }
 
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(value = "categories", allEntries = true)
+    @org.springframework.cache.annotation.CacheEvict(value = "categories#7d", allEntries = true)
     public Category updateCategory(String id, Category details) {
         Category category = getCategoryById(id);
         category.setName(details.getName());
@@ -76,7 +77,7 @@ public class CategoryService {
     }
 
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(value = "categories", allEntries = true)
+    @org.springframework.cache.annotation.CacheEvict(value = "categories#7d", allEntries = true)
     public void deleteCategory(String id) {
         if ("CAT-UNCATEGORIZED".equals(id)) {
             throw new com.devinevibes.exception.BadRequestException("Cannot delete the default Uncategorized category.");

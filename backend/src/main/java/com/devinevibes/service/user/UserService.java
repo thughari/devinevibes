@@ -25,11 +25,13 @@ public class UserService {
         this.addressRepository = addressRepository;
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "users#30m", key = "#email")
     public User getByEmail(String email) {
         return userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "users#30m", key = "#currentEmail")
     public User updateProfile(String currentEmail, UpdateUserProfileRequest request) {
         User user = getByEmail(currentEmail);
         if (request.name() != null && !request.name().isBlank()) user.setName(request.name().trim());
@@ -38,12 +40,14 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    @org.springframework.cache.annotation.Cacheable(value = "users#30m", key = "#email + ':addresses'")
     public List<AddressResponse> getAddresses(String email) {
         User user = getByEmail(email);
         return addressRepository.findAllByUserOrderByCreatedAtDesc(user).stream().map(this::toResponse).toList();
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "users#30m", key = "#email + ':addresses'")
     public AddressResponse createAddress(String email, AddressRequest request) {
         User user = getByEmail(email);
         if (request.isDefault()) unsetDefault(user);
@@ -62,6 +66,7 @@ public class UserService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "users#30m", key = "#email + ':addresses'")
     public void deleteAddress(String email, String addressId) {
         User user = getByEmail(email);
         Address address = addressRepository.findByIdAndUser(addressId, user)
@@ -70,6 +75,7 @@ public class UserService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "users#30m", key = "#email + ':addresses'")
     public AddressResponse updateAddress(String email, String addressId, AddressRequest request) {
         User user = getByEmail(email);
         Address address = addressRepository.findByIdAndUser(addressId, user)
@@ -88,6 +94,7 @@ public class UserService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "users#30m", key = "#user.email + ':addresses'")
     public void autoSaveAddress(User user, com.devinevibes.dto.order.OrderRequest request) {
         if (user == null) return;
         
