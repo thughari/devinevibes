@@ -82,8 +82,7 @@ import { WishlistService } from '../../../core/services/wishlist.service';
                 <div class="prose prose-sm max-w-none text-brand-text font-light leading-relaxed">
                   <p>{{ product()?.description }}</p>
                   <p class="mt-4 italic">
-                    All our products are 100% authentic and properly energized before dispatch. 
-                    Each item comes with a certificate of authenticity.
+                    All our products are 100% authentic and properly energized before dispatch.
                   </p>
                 </div>
               }

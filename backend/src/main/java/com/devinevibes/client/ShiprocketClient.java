@@ -181,10 +181,34 @@ public class ShiprocketClient {
         req.put("order_items", items);
         req.put("payment_method", order.getPaymentMethod() != null ? order.getPaymentMethod() : "Prepaid");
         req.put("sub_total", order.getTotalAmount());
-        req.put("length", 10);
-        req.put("breadth", 10);
-        req.put("height", 10);
-        req.put("weight", 0.5);
+
+        // Dynamic Shipping Dimensions
+        double totalWeightGrams = 0;
+        double maxLength = 10;
+        double maxBreadth = 10;
+        double maxHeight = 10;
+
+        for (OrderItem item : order.getItems()) {
+            com.devinevibes.entity.product.Product p = item.getProduct();
+            int qty = item.getQuantity();
+
+            if (p.getWeight() != null)
+                totalWeightGrams += p.getWeight().doubleValue() * qty;
+            if (p.getLength() != null)
+                maxLength = Math.max(maxLength, p.getLength().doubleValue());
+            if (p.getBreadth() != null)
+                maxBreadth = Math.max(maxBreadth, p.getBreadth().doubleValue());
+            if (p.getHeight() != null)
+                maxHeight = Math.max(maxHeight, p.getHeight().doubleValue());
+        }
+
+        // Shiprocket requires weight in KG and dimensions in CM
+        // We use the maximum dimension designated for any item in the order
+        // since small items are typically packed into the largest item's box.
+        req.put("length", Math.max(10.0, maxLength));
+        req.put("breadth", Math.max(10.0, maxBreadth));
+        req.put("height", Math.max(10.0, maxHeight));
+        req.put("weight", Math.max(0.5, totalWeightGrams / 1000.0));
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(req, headers);
         try {
