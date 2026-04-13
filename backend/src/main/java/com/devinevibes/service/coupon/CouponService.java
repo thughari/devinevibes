@@ -35,7 +35,16 @@ public class CouponService {
         coupon.setExpiresAt(request.expiresAt());
         coupon.setMaxUses(request.maxUses());
         coupon.setMaxUsesPerUser(request.maxUsesPerUser());
+
+        // Generate Meaningful ID
+        coupon.setId(generateId(coupon.getCode()));
+
         return map(couponRepository.save(coupon));
+    }
+
+    private String generateId(String code) {
+        String randomPart = java.util.UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        return "CPN-" + code.trim().toUpperCase() + "-" + randomPart;
     }
 
     @org.springframework.cache.annotation.CacheEvict(value = "admin_coupons#5m", allEntries = true)

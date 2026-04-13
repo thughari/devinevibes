@@ -76,7 +76,6 @@ public class CartService {
         cartRepository.delete(item);
     }
 
-    @org.springframework.cache.annotation.Cacheable(value = "carts#1h", key = "#email")
     public List<CartItem> fetchItems(String email) {
         return cartRepository.findByUser(userService.getByEmail(email));
     }
