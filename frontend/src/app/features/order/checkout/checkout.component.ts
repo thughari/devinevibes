@@ -185,8 +185,7 @@ declare var Razorpay: any;
                     <div class="flex flex-col">
                       <span class="text-sm font-bold uppercase tracking-wide group-hover:text-white mb-0.5">{{ coupon.code }}</span>
                       <span class="text-[10px] font-bold opacity-60 group-hover:text-white/80">
-                        @if(coupon.type === 'PERCENTAGE') { {{ coupon.discountValue }}% OFF }
-                        @else if(coupon.type === 'FIXED') { ₹{{ coupon.discountValue }} OFF }
+                        @if(coupon.type === 'FIXED') { ₹{{ coupon.discountValue }} OFF }
                         @else if(coupon.type === 'BXGX') { BUY {{ coupon.buyQty }} GET {{ coupon.getQty }} FREE }
                       </span>
                       @if(coupon.minimumCartValue > 0) {

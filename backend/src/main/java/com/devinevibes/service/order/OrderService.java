@@ -66,10 +66,10 @@ public class OrderService {
     }
 
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(
-        value = {"user_orders#1h", "carts#1h", "admin_orders#1m", "admin_analytics#5m"}, 
-        allEntries = true
-    )
+    @org.springframework.cache.annotation.Caching(evict = {
+        @org.springframework.cache.annotation.CacheEvict(value = {"user_orders#1h", "carts#1h", "admin_orders#1m", "admin_analytics#5m"}, allEntries = true),
+        @org.springframework.cache.annotation.CacheEvict(value = "users#30m", key = "#email")
+    })
     public OrderResponse createOrder(String email, OrderRequest request) {
         // Throttling: Prevent multiple PENDING orders from the same user in 60s
         Instant oneMinuteAgo = Instant.now().minus(60, ChronoUnit.SECONDS);
@@ -468,6 +468,10 @@ public class OrderService {
         );
     }
 
+    @org.springframework.cache.annotation.CacheEvict(
+        value = {"user_orders#1h", "admin_orders#1m", "admin_analytics#5m"}, 
+        allEntries = true
+    )
     @Scheduled(fixedRate = 300000)
     @Transactional
     public void autoCancelAbandonedOrders() {
@@ -494,6 +498,10 @@ public class OrderService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(
+        value = {"user_orders#1h", "admin_orders#1m", "admin_analytics#5m"}, 
+        allEntries = true
+    )
     public void processRefundUpdate(String refundId, String status) {
         Order order = orderRepository.findByRefundId(refundId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found for refund: " + refundId));
@@ -511,6 +519,10 @@ public class OrderService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(
+        value = {"user_orders#1h", "admin_orders#1m"}, 
+        allEntries = true
+    )
     public void handlePaymentFailure(String razorpayOrderId, String reason) {
         Order order = orderRepository.findByRazorpayOrderId(razorpayOrderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found for payment failure: " + razorpayOrderId));

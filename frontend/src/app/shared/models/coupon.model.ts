@@ -1,4 +1,4 @@
-export type CouponType = 'PERCENTAGE' | 'FIXED' | 'BXGX';
+export type CouponType = 'FIXED' | 'BXGX';
 
 export interface CouponResponse {
   id: string;

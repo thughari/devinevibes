@@ -122,10 +122,7 @@ public class CouponService {
         String targetProductId = null;
         Integer freeQuantity = 0;
 
-        if (coupon.getType() == CouponType.PERCENTAGE) {
-            discount = cartTotal.multiply(coupon.getDiscountValue()).divide(BigDecimal.valueOf(100));
-            message = coupon.getDiscountValue() + "% discount applied";
-        } else if (coupon.getType() == CouponType.FIXED) {
+        if (coupon.getType() == CouponType.FIXED) {
             discount = coupon.getDiscountValue();
             message = "Flat discount applied";
         } else {
@@ -164,6 +161,7 @@ public class CouponService {
         );
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value = "admin_coupons#5m", allEntries = true)
     public void incrementUsage(String code) {
         couponRepository.findByCodeIgnoreCase(code).ifPresent(coupon -> {
             int current = coupon.getUsageCount() == null ? 0 : coupon.getUsageCount();

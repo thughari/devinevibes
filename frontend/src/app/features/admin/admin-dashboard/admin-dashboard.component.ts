@@ -406,8 +406,21 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
                 </button>
               </div>
             } @else {
-              <div class="space-y-4">
-                @for (order of ordersPage()?.content; track order.id) {
+              <div class="space-y-6">
+                @for (group of groupedOrders(); track group.label) {
+                  <!-- Monthly Header -->
+                  <div class="flex items-center gap-3 pt-2">
+                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
+                    <span class="flex items-center gap-2 px-4 py-1.5 bg-white border border-gray-200 rounded-full shadow-sm">
+                      <mat-icon class="text-dv-green text-[16px] w-4 h-4">calendar_month</mat-icon>
+                      <span class="text-xs font-black text-gray-700 uppercase tracking-widest">{{ group.label }}</span>
+                      <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{{ group.orders.length }}</span>
+                    </span>
+                    <div class="h-px flex-1 bg-gradient-to-r from-gray-200 via-gray-200 to-transparent"></div>
+                  </div>
+
+                  <div class="space-y-4">
+                  @for (order of group.orders; track order.id) {
                   <div class="group relative bg-white border border-gray-100 rounded-[2rem] p-1 hover:border-dv-green/30 hover:shadow-2xl hover:shadow-dv-green/5 transition-all duration-500 cursor-pointer overflow-hidden" (click)="toggleOrder(order.id)">
                     
                     <div class="p-5 md:p-6 transition-all duration-300" [class.bg-gray-50/50]="expandedOrderId() === order.id">
@@ -577,14 +590,45 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
                               }
                             </div>
                             
-                            <!-- Total Summary -->
-                            <div class="mt-6 p-5 bg-gray-900 rounded-[1.5rem] shadow-2xl shadow-gray-900/10">
-                              <div class="flex items-center justify-between text-white/50 text-[10px] font-black uppercase tracking-[0.2em] mb-3">
-                                <span>Grand Billing Total</span>
-                                <mat-icon class="text-[16px] w-4 h-4">payments</mat-icon>
+                            <!-- Full Cost Breakdown -->
+                            <div class="mt-6 bg-gray-900 rounded-[1.5rem] shadow-2xl shadow-gray-900/10 overflow-hidden">
+                              <div class="p-5 space-y-3">
+                                <div class="flex items-center justify-between text-white/50 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
+                                  <span>Cost Breakdown</span>
+                                  <mat-icon class="text-[16px] w-4 h-4">receipt_long</mat-icon>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                  <span class="text-white/50 text-xs font-medium">Subtotal</span>
+                                  <span class="text-sm font-bold text-white/80">{{ (order.subtotalAmount || 0) | currency:'INR':'symbol':'1.0-0' }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                  <span class="text-white/50 text-xs font-medium flex items-center gap-1.5">
+                                    <mat-icon class="text-[12px] w-3 h-3">local_shipping</mat-icon> Shipping
+                                  </span>
+                                  <span class="text-sm font-bold" [class.text-emerald-400]="(order.shippingCost || 0) === 0" [class.text-white/80]="(order.shippingCost || 0) > 0">
+                                    {{ (order.shippingCost || 0) === 0 ? 'FREE' : ((order.shippingCost || 0) | currency:'INR':'symbol':'1.0-0') }}
+                                  </span>
+                                </div>
+                                @if ((order.codFee || 0) > 0) {
+                                  <div class="flex items-center justify-between">
+                                    <span class="text-white/50 text-xs font-medium flex items-center gap-1.5">
+                                      <mat-icon class="text-[12px] w-3 h-3">payments</mat-icon> COD Fee
+                                    </span>
+                                    <span class="text-sm font-bold text-amber-400">{{ order.codFee | currency:'INR':'symbol':'1.0-0' }}</span>
+                                  </div>
+                                }
+                                @if ((order.couponDiscount || 0) > 0) {
+                                  <div class="flex items-center justify-between">
+                                    <span class="text-white/50 text-xs font-medium flex items-center gap-1.5">
+                                      <mat-icon class="text-[12px] w-3 h-3">local_offer</mat-icon> Coupon Discount
+                                    </span>
+                                    <span class="text-sm font-bold text-emerald-400">- {{ order.couponDiscount | currency:'INR':'symbol':'1.0-0' }}</span>
+                                  </div>
+                                }
                               </div>
-                              <div class="flex items-baseline justify-between">
-                                <span class="text-white/40 text-xs font-medium">Inclusive of all taxes & shipping</span>
+                              <div class="border-t border-white/10 px-5 py-4 flex items-baseline justify-between bg-white/5">
+                                <span class="text-white/60 text-[10px] font-black uppercase tracking-[0.15em]">Grand Total</span>
                                 <span class="text-2xl font-black text-white tracking-tighter">{{ order.totalAmount | currency:'INR':'symbol':'1.0-0' }}</span>
                               </div>
                             </div>
@@ -592,6 +636,8 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
                         </div>
                       </div>
                     }
+                  </div>
+                  }
                   </div>
                 }
               </div>
@@ -659,7 +705,6 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
                   <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Discount Type</label>
                     <select formControlName="type" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:border-dv-green focus:ring focus:ring-dv-green/20 bg-white">
-                      <option value="PERCENTAGE">Percentage (%)</option>
                       <option value="FIXED">Flat Fixed Amount (₹)</option>
                       <option value="BXGX">Buy X Get Y (BXGX)</option>
                     </select>
@@ -732,12 +777,12 @@ import { Banner, BannerRequest } from '../../../shared/models/banner.model';
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2 mb-1.5">
                         <p class="font-bold text-gray-900 text-lg uppercase tracking-wide truncate">{{ c.code }}</p>
-                        <span class="shrink-0 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 px-2.5 py-0.5 rounded-full">{{ c.type === 'PERCENTAGE' ? '% OFF' : (c.type === 'FIXED' ? 'FLAT OFF' : 'BOGO') }}</span>
+                        <span class="shrink-0 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 px-2.5 py-0.5 rounded-full">{{ c.type === 'FIXED' ? 'FLAT OFF' : 'BOGO' }}</span>
                       </div>
                       @if (c.type === 'BXGX') {
                         <p class="text-sm text-gray-500">Buy <span class="font-semibold text-gray-700">{{ c.buyQty }}</span> Get <span class="font-semibold text-gray-700">{{ c.getQty }}</span> free</p>
                       } @else {
-                        <p class="text-sm text-gray-500">Discount: <span class="font-semibold text-gray-700">{{ c.type === 'PERCENTAGE' ? (c.discountValue + '%') : (c.discountValue | currency:'INR':'symbol':'1.0-0') }}</span></p>
+                        <p class="text-sm text-gray-500">Discount: <span class="font-semibold text-gray-700">{{ c.discountValue | currency:'INR':'symbol':'1.0-0' }}</span></p>
                       }
                       @if (c.productId) {
                         <p class="text-xs font-semibold text-dv-green mt-1">Specific Product Target</p>
@@ -1090,6 +1135,26 @@ export class AdminDashboardComponent {
   ordersSearch = signal<string>('');
   ordersStatus = signal<string | null>(null);
   ordersCurrentPage = signal<number>(0);
+
+  // Monthly grouping for orders display
+  groupedOrders = computed(() => {
+    const page = this.ordersPage();
+    if (!page?.content?.length) return [];
+    const groups: { label: string; orders: OrderResponse[] }[] = [];
+    const monthMap = new Map<string, OrderResponse[]>();
+
+    for (const order of page.content) {
+      const d = order.createdAt ? new Date(order.createdAt) : new Date();
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+      if (!monthMap.has(key)) {
+        monthMap.set(key, []);
+        groups.push({ label, orders: monthMap.get(key)! });
+      }
+      monthMap.get(key)!.push(order);
+    }
+    return groups;
+  });
   coupons = signal<CouponResponse[]>([]);
   analytics = signal<AnalyticsResponse | null>(null);
 
@@ -1195,7 +1260,7 @@ export class AdminDashboardComponent {
 
   couponForm = this.fb.group({
     code: ['', Validators.required],
-    type: ['PERCENTAGE', Validators.required],
+    type: ['FIXED', Validators.required],
     discountValue: [0],
     minimumCartValue: [0],
     buyQty: [1],
@@ -1498,14 +1563,14 @@ export class AdminDashboardComponent {
 
   openAddCoupon() {
     this.editingCouponId.set(null);
-    this.couponForm.reset({ code: '', type: 'PERCENTAGE', discountValue: 0, minimumCartValue: 0, buyQty: 1, getQty: 1, productId: '', active: true, expiresAt: '', maxUses: null, maxUsesPerUser: null });
+    this.couponForm.reset({ code: '', type: 'FIXED', discountValue: 0, minimumCartValue: 0, buyQty: 1, getQty: 1, productId: '', active: true, expiresAt: '', maxUses: null, maxUsesPerUser: null });
     this.showCouponForm.set(true);
   }
 
   closeCouponForm() {
     this.showCouponForm.set(false);
     this.editingCouponId.set(null);
-    this.couponForm.reset({ code: '', type: 'PERCENTAGE', discountValue: 0, minimumCartValue: 0, buyQty: 1, getQty: 1, productId: '', active: true, expiresAt: '', maxUses: null, maxUsesPerUser: null });
+    this.couponForm.reset({ code: '', type: 'FIXED', discountValue: 0, minimumCartValue: 0, buyQty: 1, getQty: 1, productId: '', active: true, expiresAt: '', maxUses: null, maxUsesPerUser: null });
   }
 
   editCoupon(c: CouponResponse) {
