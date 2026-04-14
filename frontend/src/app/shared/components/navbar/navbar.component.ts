@@ -10,26 +10,55 @@ import { WishlistService } from '../../../core/services/wishlist.service';
   standalone: true,
   imports: [RouterLink, RouterLinkActive, MatIconModule],
   template: `
-    <nav class="sticky top-0 z-40 w-full border-b border-amber-500/10 bg-white/80 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all duration-300">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav class="sticky top-0 z-40 w-full border-b border-brand-gold/20 bg-[#FFF9E5]/90 backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.04)] transition-all duration-500">
+      <div class="max-w-7xl mx-auto px-6 sm:px-8">
         <div class="flex justify-between items-center h-20 sm:h-24">
           
           <!-- Logo -->
           <div class="flex-shrink-0 flex items-center">
-            <a routerLink="/" class="flex items-center gap-3 group">
-              <img src="/logo.jpeg" alt="Devine Vibes" class="w-12 h-12 rounded-full object-cover shadow-sm group-hover:scale-105 transition-transform duration-500" />
-              <span class="font-serif text-2xl sm:text-3xl font-semibold tracking-wide bg-gradient-to-r from-brand-gold-light via-brand-gold to-brand-green bg-clip-text text-transparent drop-shadow-sm">Devine Vibes</span>
+            <a routerLink="/" class="flex items-center gap-4 group">
+              <div class="relative">
+                <div class="absolute inset-0 bg-brand-gold/20 rounded-full blur-md group-hover:blur-lg transition-all duration-500"></div>
+                <img src="/logo.jpeg" alt="Devine Vibes" class="relative w-14 h-14 rounded-full object-cover shadow-md group-hover:scale-110 transition-transform duration-700 ring-2 ring-brand-gold/20" />
+              </div>
+              <span class="font-serif text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-dark via-[#C79A2A] to-brand-green bg-clip-text text-transparent drop-shadow-sm group-hover:drop-shadow-md transition-all">Devine Vibes</span>
             </a>
           </div>
 
           <!-- Desktop Menu -->
-          <div class="hidden lg:flex items-center space-x-5 xl:space-x-8">
-            <a routerLink="/" routerLinkActive="text-brand-gold font-semibold" [routerLinkActiveOptions]="{exact: true}" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">Home</a>
-            <a routerLink="/products" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">Store</a>
-            <a routerLink="/about" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">About Us</a>
-            <a routerLink="/contact" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">Contact Us</a>
+          <div class="hidden lg:flex items-center space-x-12">
+            <a routerLink="/" 
+               routerLinkActive="text-brand-gold" 
+               [routerLinkActiveOptions]="{exact: true}" 
+               class="text-brand-dark hover:text-brand-gold transition-all duration-300 text-[10px] uppercase tracking-[0.4em] font-bold relative group py-2">
+              Home
+              <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-brand-gold transition-all duration-300 group-hover:w-full active-link-indicator"></span>
+            </a>
+            <a routerLink="/products" 
+               routerLinkActive="text-brand-gold" 
+               class="text-brand-dark hover:text-brand-gold transition-all duration-300 text-[10px] uppercase tracking-[0.4em] font-bold relative group py-2">
+              Store
+              <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-brand-gold transition-all duration-300 group-hover:w-full active-link-indicator"></span>
+            </a>
+            <a routerLink="/about" 
+               routerLinkActive="text-brand-gold" 
+               class="text-brand-dark hover:text-brand-gold transition-all duration-300 text-[10px] uppercase tracking-[0.4em] font-bold relative group py-2">
+              About Us
+              <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-brand-gold transition-all duration-300 group-hover:w-full active-link-indicator"></span>
+            </a>
+            <a routerLink="/contact" 
+               routerLinkActive="text-brand-gold" 
+               class="text-brand-dark hover:text-brand-gold transition-all duration-300 text-[10px] uppercase tracking-[0.4em] font-bold relative group py-2">
+              Contact
+              <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-brand-gold transition-all duration-300 group-hover:w-full active-link-indicator"></span>
+            </a>
             @if (auth.isAuthenticated()) {
-              <a routerLink="/user/profile" routerLinkActive="text-brand-gold font-semibold" class="text-brand-text hover:text-brand-gold transition-colors text-sm uppercase tracking-widest font-medium relative group after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-brand-gold after:scale-x-0 group-hover:after:scale-x-100 after:transition-transform after:origin-left">My Account</a>
+              <a routerLink="/user/profile" 
+                 routerLinkActive="text-brand-gold" 
+                 class="text-brand-dark hover:text-brand-gold transition-all duration-300 text-[10px] uppercase tracking-[0.4em] font-bold relative group py-2">
+                Profile
+                <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-brand-gold transition-all duration-300 group-hover:w-full active-link-indicator"></span>
+              </a>
             }
           </div>
 

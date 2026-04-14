@@ -10,40 +10,50 @@ import { RouterLink } from '@angular/router';
   imports: [CommonModule, RouterLink],
   template: `
     @if (activeBanner()) {
-      <div class="relative bg-brand-green text-white px-4 py-2 sm:px-6 lg:px-8 overflow-hidden z-[1001]" 
-           [class.bg-brand-red]="activeBanner()?.type === 'ALERT'"
-           [class.bg-brand-gold]="activeBanner()?.type === 'SALE'">
-        <div class="max-w-7xl mx-auto flex items-center justify-between">
-          <div class="flex-1 flex items-center justify-center gap-4 text-xs sm:text-sm font-medium">
+      <div class="relative px-4 py-2.5 sm:px-6 lg:px-8 overflow-hidden z-[1001] shadow-sm border-b border-black/5 animate-fadeIn" 
+           [ngClass]="{
+             'bg-gradient-to-r from-[#C79A2A] via-[#E0BC60] to-[#C79A2A] animate-gradient-shift text-brand-dark': activeBanner()?.type === 'SALE',
+             'bg-brand-green text-white': activeBanner()?.type === 'INFO',
+             'bg-[#C0392B] text-white': activeBanner()?.type === 'ALERT'
+           }">
+        
+        <!-- Luxury overlay effects for SALE banners -->
+        @if (activeBanner()?.type === 'SALE') {
+          <div class="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.3)_0%,_transparent_50%),radial-gradient(circle_at_bottom_left,_rgba(199,154,42,0.2)_0%,_transparent_50%)]"></div>
+          <div class="absolute inset-0 pointer-events-none animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent bg-[length:200%_100%]"></div>
+        }
+
+        <div class="max-w-7xl mx-auto flex items-center justify-between relative z-10">
+          <div class="flex-1 flex items-center justify-center gap-4 text-[10px] sm:text-xs font-bold tracking-widest uppercase">
             <span class="flex items-center gap-2">
               <span class="animate-pulse">✨</span>
               <span [innerHTML]="activeBanner()?.content"></span>
             </span>
             
             @if (countdownText()) {
-              <span class="hidden sm:inline-flex bg-white/20 px-2 py-0.5 rounded font-mono text-xs">
+              <span class="hidden md:inline-flex bg-black/10 backdrop-blur-sm px-2.5 py-1 rounded-full font-mono text-[10px] border border-black/5">
                 Ends in: {{ countdownText() }}
               </span>
             }
 
             @if (activeBanner()?.link) {
               <a [routerLink]="activeBanner()?.link" 
-                 class="underline hover:text-white/80 transition-colors hidden sm:inline ml-2">
+                 class="px-4 py-1.5 bg-brand-dark text-white rounded-full text-[9px] hover:bg-brand-green transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 ml-2">
                 Click here
               </a>
             }
           </div>
 
           @if (activeBanner()?.canDismiss) {
-            <button (click)="dismiss()" class="p-1 hover:bg-white/10 rounded-full transition-colors ml-4">
-              <span class="block w-4 h-4 text-white">✕</span>
+            <button (click)="dismiss()" class="p-1 px-2.5 hover:bg-black/5 rounded-full transition-colors ml-4 text-[14px] flex items-center justify-center font-light op-70 hover:op-100">
+              ✕
             </button>
           }
         </div>
         
-        <!-- Subtle progress bar for timer if any -->
+        <!-- Subtle progress bar -->
         @if (countdownText()) {
-          <div class="absolute bottom-0 left-0 h-0.5 bg-white/30 transition-all duration-1000"
+          <div class="absolute bottom-0 left-0 h-0.5 bg-black/20 transition-all duration-1000"
                [style.width.%]="timerProgress()">
           </div>
         }

@@ -17,16 +17,18 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [ProductCardComponent, MatIconModule, TitleCasePipe, FormsModule],
   template: `
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <!-- Header -->
-      <div class="flex flex-col md:flex-row justify-between items-end mb-12 border-b border-gray-200 pb-6">
-        <div>
-          <h1 class="text-4xl font-sans font-bold text-brand-dark mb-2">
-            {{ category() ? (category() | titlecase) : 'All Collection' }}
-          </h1>
-          <p class="text-brand-text">Discover our sacred and authentic spiritual items.</p>
-        </div>
+    <header class="relative bg-gradient-to-r from-[#FFD700] via-[#FFF2A8] to-[#FFD700] py-10 sm:py-16 overflow-hidden">
+      <div class="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(circle_at_top_right,_rgba(199,154,42,0.15)_0%,_transparent_50%),radial-gradient(circle_at_bottom_left,_rgba(22,78,50,0.05)_0%,_transparent_50%)]"></div>
+      <div class="max-w-7xl mx-auto px-6 relative z-10 text-left animate-fadeIn">
+        <h1 class="text-3xl sm:text-5xl font-serif font-bold text-brand-dark mb-2 drop-shadow-sm">
+          {{ category() ? (category() | titlecase) : 'Sacred Collection' }}
+        </h1>
+        <p class="text-brand-dark/70 font-sans font-medium uppercase tracking-[0.3em] text-[10px] sm:text-xs">Discover our curated spiritual essentials</p>
       </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-6 lg:px-8 py-10 sm:py-16">
+
         
       <!-- Search and Filter Bar -->
       <div class="flex flex-col lg:flex-row gap-6 mb-12">
