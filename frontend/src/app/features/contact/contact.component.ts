@@ -21,7 +21,7 @@ import { MatIconModule } from '@angular/material/icon';
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
         <div class="bg-white border border-brand-gold/10 rounded-3xl p-10 shadow-xl hover:shadow-brand-gold/5 transition-all duration-500 group">
           <div class="w-12 h-12 rounded-2xl bg-brand-green/10 flex items-center justify-center text-brand-green mb-6 group-hover:scale-110 transition-transform">
             <mat-icon>mail</mat-icon>
@@ -40,6 +40,15 @@ import { MatIconModule } from '@angular/material/icon';
               <span class="text-[10px] uppercase tracking-widest text-brand-text/50 font-bold mb-1">Hours</span>
               <span class="text-lg font-medium text-brand-dark">Mon–Sat, 10:00 AM – 7:00 PM IST</span>
             </div>
+            <a
+              href="https://wa.me/919999999999?text=Hi%20Devine%20Vibes%2C%20I%20need%20help%20with%20my%20order."
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex mt-3 items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95 transition"
+            >
+              <mat-icon class="!text-base">chat</mat-icon>
+              Chat on WhatsApp
+            </a>
           </div>
         </div>
 
@@ -67,6 +76,28 @@ import { MatIconModule } from '@angular/material/icon';
             </ul>
           </div>
         </div>
+      </div>
+
+      <div class="bg-white border border-brand-gold/10 rounded-3xl p-4 sm:p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4 px-2">
+          <h2 class="font-serif text-2xl font-bold text-brand-dark">Find Us on Google Maps</h2>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=Devine+Vibes+India"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1 text-sm font-semibold text-brand-green hover:text-brand-green-dark"
+          >
+            Open in Google Maps
+            <mat-icon class="!text-base">open_in_new</mat-icon>
+          </a>
+        </div>
+        <iframe
+          title="Devine Vibes location on Google Maps"
+          class="w-full h-[360px] rounded-2xl border border-brand-gold/20"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          src="https://www.google.com/maps?q=Devine+Vibes+India&output=embed">
+        </iframe>
       </div>
     </section>
   `
