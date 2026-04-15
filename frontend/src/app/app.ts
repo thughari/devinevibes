@@ -18,7 +18,7 @@ import { AnnouncementBannerComponent } from './shared/components/announcement-ba
     <app-footer />
 
     <a
-      href="https://wa.me/919999999999?text=Hi%20Devine%20Vibes%2C%20I%20need%20help%20with%20my%20order."
+      href="https://wa.me/919949944726?text=Hi%20Devine%20Vibes%2C%20I%20need%20help%20with%20my%20order."
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with Devine Vibes on WhatsApp"

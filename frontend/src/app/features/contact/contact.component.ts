@@ -41,7 +41,7 @@ import { MatIconModule } from '@angular/material/icon';
               <span class="text-lg font-medium text-brand-dark">Mon–Sat, 10:00 AM – 7:00 PM IST</span>
             </div>
             <a
-              href="https://wa.me/919999999999?text=Hi%20Devine%20Vibes%2C%20I%20need%20help%20with%20my%20order."
+              href="https://wa.me/919949944726?text=Hi%20Devine%20Vibes%2C%20I%20need%20help%20with%20my%20order."
               target="_blank"
               rel="noopener noreferrer"
               class="inline-flex mt-3 items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95 transition"
