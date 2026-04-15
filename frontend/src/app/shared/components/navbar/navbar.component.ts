@@ -110,7 +110,7 @@ import { WishlistService } from '../../../core/services/wishlist.service';
             
             <!-- Mobile menu button -->
             <button class="lg:hidden text-brand-dark hover:text-brand-gold transition-colors" (click)="mobileMenuOpen.set(!mobileMenuOpen())">
-              <mat-icon class="text-[28px]">{{ mobileMenuOpen() ? 'close' : 'menu_open' }}</mat-icon>
+                <mat-icon class="text-[28px]">{{ mobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
             </button>
           </div>
         </div>
