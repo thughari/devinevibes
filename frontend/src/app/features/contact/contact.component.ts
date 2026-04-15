@@ -81,8 +81,9 @@ import { MatIconModule } from '@angular/material/icon';
       <div class="bg-white border border-brand-gold/10 rounded-3xl p-4 sm:p-6 shadow-xl">
         <div class="flex items-center justify-between mb-4 px-2">
           <h2 class="font-serif text-2xl font-bold text-brand-dark">Find Us on Google Maps</h2>
+          
           <a
-            href="https://www.google.com/maps/search/?api=1&query=Devine+Vibes+India"
+            href="https://maps.app.goo.gl/9hycSDq9hmAdn2yD9"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex items-center gap-1 text-sm font-semibold text-brand-green hover:text-brand-green-dark"
@@ -96,7 +97,7 @@ import { MatIconModule } from '@angular/material/icon';
           class="w-full h-[360px] rounded-2xl border border-brand-gold/20"
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
-          src="https://www.google.com/maps?q=Devine+Vibes+India&output=embed">
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d173795.96090847132!2d80.25874339322586!3d15.730788467711951!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a4a44190bfbc73d%3A0xa88209a2b42c2b62!2sKasi%20Visweswara%20Fast%20Foods!5e0!3m2!1sen!2sin!4v1776240664790!5m2!1sen!2sind">
         </iframe>
       </div>
     </section>
