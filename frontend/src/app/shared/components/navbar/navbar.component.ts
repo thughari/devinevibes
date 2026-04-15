@@ -11,17 +11,17 @@ import { WishlistService } from '../../../core/services/wishlist.service';
   imports: [RouterLink, RouterLinkActive, MatIconModule],
   template: `
     <nav class="sticky top-0 z-40 w-full border-b border-brand-gold/20 bg-[#FFF9E5]/90 backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.04)] transition-all duration-500">
-      <div class="max-w-7xl mx-auto px-6 sm:px-8">
-        <div class="flex justify-between items-center h-20 sm:h-24">
+      <div class="max-w-7xl mx-auto px-4 sm:px-8">
+        <div class="flex justify-between items-center h-16 sm:h-24">
           
           <!-- Logo -->
           <div class="flex-shrink-0 flex items-center">
-            <a routerLink="/" class="flex items-center gap-4 group">
+            <a routerLink="/" class="flex items-center gap-2 sm:gap-4 group">
               <div class="relative">
                 <div class="absolute inset-0 bg-brand-gold/20 rounded-full blur-md group-hover:blur-lg transition-all duration-500"></div>
-                <img src="/logo.jpeg" alt="Devine Vibes" class="relative w-14 h-14 rounded-full object-cover shadow-md group-hover:scale-110 transition-transform duration-700 ring-2 ring-brand-gold/20" />
+                <img src="/logo.jpeg" alt="Devine Vibes" class="relative w-10 h-10 sm:w-14 sm:h-14 rounded-full object-cover shadow-md group-hover:scale-110 transition-transform duration-700 ring-2 ring-brand-gold/20" />
               </div>
-              <span class="font-serif text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-dark via-[#C79A2A] to-brand-green bg-clip-text text-transparent drop-shadow-sm group-hover:drop-shadow-md transition-all">Devine Vibes</span>
+              <span class="font-serif text-xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-dark via-[#C79A2A] to-brand-green bg-clip-text text-transparent drop-shadow-sm group-hover:drop-shadow-md transition-all">Devine Vibes</span>
             </a>
           </div>
 
@@ -63,7 +63,7 @@ import { WishlistService } from '../../../core/services/wishlist.service';
           </div>
 
           <!-- Actions -->
-          <div class="flex items-center space-x-4 sm:space-x-8">
+          <div class="flex items-center space-x-3 sm:space-x-8">
             <a routerLink="/wishlist" class="flex items-center text-brand-dark hover:text-brand-gold transition-colors group">
               <div class="relative">
                 <mat-icon class="text-brand-green group-hover:text-brand-gold transition-colors duration-300">favorite_border</mat-icon>
