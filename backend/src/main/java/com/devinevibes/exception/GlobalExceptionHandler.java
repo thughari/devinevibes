@@ -39,6 +39,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of("timestamp", Instant.now(), "errors", errors));
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
+        ex.printStackTrace();
+        String message = "Cannot delete this record because it is referenced by other records (e.g., existing orders).";
+        return build(HttpStatus.CONFLICT, message);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleException(Exception ex) {
         ex.printStackTrace();
