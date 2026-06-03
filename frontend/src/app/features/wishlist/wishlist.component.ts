@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -40,6 +40,14 @@ import { MatDialogModule } from '@angular/material/dialog';
                 >
                   <mat-icon class="text-[20px] w-[20px] h-[20px]">delete_outline</mat-icon>
                 </button>
+
+                <!-- Plus One Floating Badge -->
+                @if (animatingProducts()[product.id]) {
+                  <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none bg-brand-green text-white font-sans font-bold text-lg px-4 py-2 rounded-full shadow-lg plus-one-animation flex items-center justify-center gap-1">
+                    <mat-icon class="text-[16px] w-[16px] h-[16px] flex items-center justify-center">done</mat-icon>
+                    <span>+1</span>
+                  </div>
+                }
 
                 @if (product.originalPrice && product.originalPrice > product.price) {
                   <div class="absolute top-4 left-4 px-3 py-1 bg-brand-gold text-white text-[10px] uppercase tracking-widest font-bold rounded-sm shadow-sm">
@@ -110,6 +118,26 @@ import { MatDialogModule } from '@angular/material/dialog';
   `,
   styles: [`
     :host { display: block; }
+    @keyframes floatUpFade {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, 0) scale(0.6);
+      }
+      15% {
+        opacity: 1;
+        transform: translate(-50%, -20px) scale(1.1);
+      }
+      80% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -60px) scale(1);
+      }
+    }
+    .plus-one-animation {
+      animation: floatUpFade 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
   `]
 })
 export class WishlistComponent {
@@ -117,6 +145,8 @@ export class WishlistComponent {
   cart = inject(CartService);
   snackbar = inject(SnackbarService);
   private confirmService = inject(ConfirmService);
+
+  animatingProducts = signal<{ [key: string]: boolean }>({});
 
   addToCart(product: any) {
     this.cart.addToCart({
@@ -127,6 +157,18 @@ export class WishlistComponent {
       imageUrl: product.imageUrl
     }, 1);
     this.snackbar.showSuccess(`${product.name} added to bag`);
+
+    this.animatingProducts.update(curr => ({ ...curr, [product.id]: false }));
+    setTimeout(() => {
+      this.animatingProducts.update(curr => ({ ...curr, [product.id]: true }));
+      setTimeout(() => {
+        this.animatingProducts.update(curr => {
+          const next = { ...curr };
+          delete next[product.id];
+          return next;
+        });
+      }, 1200);
+    }, 10);
   }
 
   removeItem(product: any) {

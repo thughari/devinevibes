@@ -33,13 +33,21 @@ import { WishlistService } from '../../../core/services/wishlist.service';
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <!-- Image Gallery -->
           <div class="space-y-4">
-            <div class="aspect-square rounded-lg overflow-hidden bg-brand-gray border border-gray-100">
+            <div class="aspect-square rounded-lg overflow-hidden bg-brand-gray border border-gray-100 relative">
               <img
                 [src]="selectedMedia() || product()?.imageUrl || 'assets/images/placeholder-product.webp'"
                 [alt]="product()?.name"
                 referrerpolicy="no-referrer"
                 class="w-full h-full object-cover"
               />
+              
+              <!-- Plus One Floating Badge -->
+              @if (showPlusOne()) {
+                <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none bg-brand-green text-white font-sans font-bold text-lg px-4 py-2 rounded-full shadow-lg plus-one-animation flex items-center justify-center gap-1">
+                  <mat-icon class="text-[16px] w-[16px] h-[16px] flex items-center justify-center">done</mat-icon>
+                  <span>+{{ quantity() }}</span>
+                </div>
+              }
             </div>
             <div class="grid grid-cols-4 gap-4">
               @for (img of allGalleryImages(); track img) {
@@ -167,7 +175,29 @@ import { WishlistService } from '../../../core/services/wishlist.service';
         </div>
       }
     </div>
-  `
+  `,
+  styles: [`
+    @keyframes floatUpFade {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, 0) scale(0.6);
+      }
+      15% {
+        opacity: 1;
+        transform: translate(-50%, -20px) scale(1.1);
+      }
+      80% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -60px) scale(1);
+      }
+    }
+    .plus-one-animation {
+      animation: floatUpFade 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+  `]
 })
 export class ProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
@@ -180,6 +210,8 @@ export class ProductDetailComponent implements OnInit {
   isLoading = signal(true);
   quantity = signal(1);
   selectedMedia = signal<string | null>(null);
+  showPlusOne = signal(false);
+  private timeoutId: any;
 
   isInWishlist = computed(() => {
     const prod = this.product();
@@ -245,6 +277,17 @@ export class ProductDetailComponent implements OnInit {
     if (this.product()) {
       this.cartService.addToCart(this.product()!, this.quantity());
       this.snackbar.showSuccess(`Added ${this.quantity()}x ${this.product()!.name} to cart`);
+      
+      this.showPlusOne.set(false);
+      if (this.timeoutId) {
+        clearTimeout(this.timeoutId);
+      }
+      setTimeout(() => {
+        this.showPlusOne.set(true);
+        this.timeoutId = setTimeout(() => {
+          this.showPlusOne.set(false);
+        }, 1200);
+      }, 10);
     }
   }
 

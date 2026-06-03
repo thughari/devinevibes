@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { ProductResponse } from '../../models/product.model';
 import { RouterLink } from '@angular/router';
@@ -21,15 +21,23 @@ import { MatIconModule } from '@angular/material/icon';
         />
         
         <!-- Quick Add Overlay -->
-        <div class="absolute inset-0 bg-brand-dark/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center backdrop-blur-[1px]">
+        <div class="absolute inset-0 bg-brand-dark/5 lg:bg-brand-dark/10 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 flex items-end lg:items-center justify-center pb-4 lg:pb-0 backdrop-blur-[0.5px] lg:backdrop-blur-[1px]">
           <button 
             (click)="onAddToCart($event)"
-            class="translate-y-4 group-hover:translate-y-0 transition-all duration-500 bg-white/95 backdrop-blur-md text-brand-dark px-6 py-3 rounded-full font-sans font-medium uppercase tracking-widest text-[11px] hover:bg-brand-gold hover:text-white flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.15)] ring-1 ring-black/5"
+            class="translate-y-0 lg:translate-y-4 lg:group-hover:translate-y-0 transition-all duration-500 bg-white/95 backdrop-blur-md text-brand-dark px-4 py-2.5 lg:px-6 lg:py-3 rounded-full font-sans font-medium uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-brand-gold hover:text-white flex items-center gap-1.5 lg:gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.15)] ring-1 ring-black/5"
           >
-            <mat-icon class="text-[16px] w-[16px] h-[16px]">shopping_bag</mat-icon>
+            <mat-icon class="text-[14px] lg:text-[16px] w-[14px] lg:w-[16px] h-[14px] lg:h-[16px] flex items-center justify-center">shopping_bag</mat-icon>
             Add to Bag
           </button>
         </div>
+
+        <!-- Plus One Floating Badge -->
+        @if (showPlusOne()) {
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none bg-brand-green text-white font-sans font-bold text-lg px-4 py-2 rounded-full shadow-lg plus-one-animation flex items-center justify-center gap-1">
+            <mat-icon class="text-[16px] w-[16px] h-[16px] flex items-center justify-center">done</mat-icon>
+            <span>+1</span>
+          </div>
+        }
         
         @if (product && product.stock <= 5 && product.stock > 0) {
           <div class="absolute top-3 left-3 bg-[#a33838] text-white text-[10px] font-bold px-2.5 py-1 rounded-sm uppercase tracking-widest shadow-md">
@@ -59,17 +67,54 @@ import { MatIconModule } from '@angular/material/icon';
         </div>
       </div>
     </div>
-  `
+  `,
+  styles: [`
+    @keyframes floatUpFade {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, 0) scale(0.6);
+      }
+      15% {
+        opacity: 1;
+        transform: translate(-50%, -20px) scale(1.1);
+      }
+      80% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -60px) scale(1);
+      }
+    }
+    .plus-one-animation {
+      animation: floatUpFade 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+  `]
 })
 export class ProductCardComponent {
   @Input() product?: ProductResponse;
   @Output() addToCart = new EventEmitter<ProductResponse>();
+
+  showPlusOne = signal(false);
+  private timeoutId: any;
 
   onAddToCart(event: Event) {
     event.preventDefault();
     event.stopPropagation();
     if (this.product) {
       this.addToCart.emit(this.product);
+      
+      this.showPlusOne.set(false);
+      if (this.timeoutId) {
+        clearTimeout(this.timeoutId);
+      }
+      setTimeout(() => {
+        this.showPlusOne.set(true);
+        this.timeoutId = setTimeout(() => {
+          this.showPlusOne.set(false);
+        }, 1200);
+      }, 10);
     }
   }
 }
+
