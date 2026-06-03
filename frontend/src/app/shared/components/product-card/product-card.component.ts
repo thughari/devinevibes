@@ -1,9 +1,10 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, inject, computed } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { ProductResponse } from '../../models/product.model';
 import { RouterLink } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-product-card',
@@ -20,15 +21,39 @@ import { MatIconModule } from '@angular/material/icon';
           class="object-cover w-full h-full scale-100 group-hover:scale-105 transition-transform duration-700 ease-in-out"
         />
         
-        <!-- Quick Add Overlay -->
+        <!-- Quick Add Overlay / Quantity Controller -->
         <div class="absolute inset-0 bg-brand-dark/5 lg:bg-brand-dark/10 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 flex items-end lg:items-center justify-center pb-4 lg:pb-0 backdrop-blur-[0.5px] lg:backdrop-blur-[1px]">
-          <button 
-            (click)="onAddToCart($event)"
-            class="translate-y-0 lg:translate-y-4 lg:group-hover:translate-y-0 transition-all duration-500 bg-white/95 backdrop-blur-md text-brand-dark px-4 py-2.5 lg:px-6 lg:py-3 rounded-full font-sans font-medium uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-brand-gold hover:text-white flex items-center gap-1.5 lg:gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.15)] ring-1 ring-black/5"
-          >
-            <mat-icon class="text-[14px] lg:text-[16px] w-[14px] lg:w-[16px] h-[14px] lg:h-[16px] flex items-center justify-center">shopping_bag</mat-icon>
-            Add to Bag
-          </button>
+          @if (cartQuantity() === 0) {
+            <button 
+              (click)="onAddToCart($event)"
+              class="translate-y-0 lg:translate-y-4 lg:group-hover:translate-y-0 transition-all duration-500 bg-white/95 backdrop-blur-md text-brand-dark px-4 py-2.5 lg:px-6 lg:py-3 rounded-full font-sans font-medium uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-brand-gold hover:text-white flex items-center gap-1.5 lg:gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.15)] ring-1 ring-black/5 cursor-pointer"
+            >
+              <mat-icon class="text-[14px] lg:text-[16px] w-[14px] lg:w-[16px] h-[14px] lg:h-[16px] flex items-center justify-center">shopping_bag</mat-icon>
+              Add to Bag
+            </button>
+          } @else {
+            <div 
+              class="translate-y-0 lg:translate-y-4 lg:group-hover:translate-y-0 transition-all duration-500 bg-white/95 backdrop-blur-md text-brand-dark px-2 py-1.5 lg:px-4 lg:py-2 rounded-full font-sans font-medium flex items-center justify-between gap-3 lg:gap-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] ring-1 ring-black/5 min-w-[100px] lg:min-w-[120px]"
+              (click)="$event.stopPropagation(); $event.preventDefault()"
+            >
+              <button 
+                (click)="onDecreaseCart($event)"
+                class="w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center hover:bg-brand-gold/10 hover:text-brand-gold transition-colors cursor-pointer"
+              >
+                <mat-icon class="text-[14px] lg:text-[16px] w-[14px] lg:w-[16px] h-[14px] lg:h-[16px] flex items-center justify-center">remove</mat-icon>
+              </button>
+              
+              <span class="font-sans font-bold text-xs lg:text-sm text-brand-dark w-4 text-center select-none">{{ cartQuantity() }}</span>
+              
+              <button 
+                (click)="onIncreaseCart($event)"
+                [disabled]="product && cartQuantity() >= product.stock"
+                class="w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center hover:bg-brand-gold/10 hover:text-brand-gold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <mat-icon class="text-[14px] lg:text-[16px] w-[14px] lg:w-[16px] h-[14px] lg:h-[16px] flex items-center justify-center">add</mat-icon>
+              </button>
+            </div>
+          }
         </div>
 
         <!-- Plus One Floating Badge -->
@@ -95,26 +120,65 @@ export class ProductCardComponent {
   @Input() product?: ProductResponse;
   @Output() addToCart = new EventEmitter<ProductResponse>();
 
+  cart = inject(CartService);
+
   showPlusOne = signal(false);
   private timeoutId: any;
+
+  cartQuantity = computed(() => {
+    if (!this.product) return 0;
+    const item = this.cart.items().find(i => i.productId === this.product!.id);
+    return item ? item.quantity : 0;
+  });
 
   onAddToCart(event: Event) {
     event.preventDefault();
     event.stopPropagation();
     if (this.product) {
       this.addToCart.emit(this.product);
-      
-      this.showPlusOne.set(false);
-      if (this.timeoutId) {
-        clearTimeout(this.timeoutId);
-      }
-      setTimeout(() => {
-        this.showPlusOne.set(true);
-        this.timeoutId = setTimeout(() => {
-          this.showPlusOne.set(false);
-        }, 1200);
-      }, 10);
+      this.triggerPlusOneAnimation();
     }
   }
+
+  onDecreaseCart(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.product) {
+      const item = this.cart.items().find(i => i.productId === this.product!.id);
+      if (item) {
+        if (item.quantity > 1) {
+          this.cart.updateQuantity(item, item.quantity - 1);
+        } else {
+          this.cart.removeItem(item);
+        }
+      }
+    }
+  }
+
+  onIncreaseCart(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.product) {
+      const item = this.cart.items().find(i => i.productId === this.product!.id);
+      if (item) {
+        this.cart.updateQuantity(item, item.quantity + 1);
+        this.triggerPlusOneAnimation();
+      }
+    }
+  }
+
+  triggerPlusOneAnimation() {
+    this.showPlusOne.set(false);
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+    }
+    setTimeout(() => {
+      this.showPlusOne.set(true);
+      this.timeoutId = setTimeout(() => {
+        this.showPlusOne.set(false);
+      }, 1200);
+    }, 10);
+  }
 }
+
 

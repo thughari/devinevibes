@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -72,14 +72,33 @@ import { MatDialogModule } from '@angular/material/dialog';
                 </div>
 
                 <div class="space-y-3">
-                  <button 
-                    (click)="addToCart(product)"
-                    [disabled]="product.stock === 0"
-                    class="w-full bg-brand-green text-white py-4 rounded-full font-sans font-medium uppercase tracking-widest hover:bg-brand-gold transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(31,122,85,0.2)] disabled:opacity-50 text-sm"
-                  >
-                    <mat-icon class="text-[18px] w-[18px] h-[18px]">shopping_bag</mat-icon>
-                    Add to Bag
-                  </button>
+                  @if (getCartQuantity(product.id) === 0) {
+                    <button 
+                      (click)="addToCart(product)"
+                      [disabled]="product.stock === 0"
+                      class="w-full bg-brand-green text-white py-4 rounded-full font-sans font-medium uppercase tracking-widest hover:bg-brand-gold transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(31,122,85,0.2)] disabled:opacity-50 text-sm cursor-pointer"
+                    >
+                      <mat-icon class="text-[18px] w-[18px] h-[18px]">shopping_bag</mat-icon>
+                      Add to Bag
+                    </button>
+                  } @else {
+                    <div class="w-full border border-brand-green text-brand-green py-3 px-4 rounded-full font-sans font-medium flex items-center justify-between shadow-[0_4px_15px_rgba(31,122,85,0.05)] h-[56px] box-border">
+                      <button 
+                        (click)="decreaseCart(product)"
+                        class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-brand-green/10 transition-colors cursor-pointer text-brand-green"
+                      >
+                        <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">remove</mat-icon>
+                      </button>
+                      <span class="font-sans font-bold text-sm text-brand-dark select-none">{{ getCartQuantity(product.id) }}</span>
+                      <button 
+                        (click)="increaseCart(product)"
+                        [disabled]="getCartQuantity(product.id) >= product.stock"
+                        class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-brand-green/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-brand-green"
+                      >
+                        <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">add</mat-icon>
+                      </button>
+                    </div>
+                  }
                   <a 
                     [routerLink]="['/products', product.id]" 
                     class="block w-full text-center py-3 text-brand-text text-[11px] uppercase tracking-[0.2em] font-medium hover:text-brand-gold transition-colors"
@@ -148,6 +167,11 @@ export class WishlistComponent {
 
   animatingProducts = signal<{ [key: string]: boolean }>({});
 
+  getCartQuantity(productId: string): number {
+    const item = this.cart.items().find(i => i.productId === productId);
+    return item ? item.quantity : 0;
+  }
+
   addToCart(product: any) {
     this.cart.addToCart({
       id: product.id,
@@ -158,13 +182,36 @@ export class WishlistComponent {
     }, 1);
     this.snackbar.showSuccess(`${product.name} added to bag`);
 
-    this.animatingProducts.update(curr => ({ ...curr, [product.id]: false }));
+    this.triggerWishlistPlusOneAnimation(product.id);
+  }
+
+  decreaseCart(product: any) {
+    const item = this.cart.items().find(i => i.productId === product.id);
+    if (item) {
+      if (item.quantity > 1) {
+        this.cart.updateQuantity(item, item.quantity - 1);
+      } else {
+        this.cart.removeItem(item);
+      }
+    }
+  }
+
+  increaseCart(product: any) {
+    const item = this.cart.items().find(i => i.productId === product.id);
+    if (item) {
+      this.cart.updateQuantity(item, item.quantity + 1);
+      this.triggerWishlistPlusOneAnimation(product.id);
+    }
+  }
+
+  triggerWishlistPlusOneAnimation(productId: string) {
+    this.animatingProducts.update(curr => ({ ...curr, [productId]: false }));
     setTimeout(() => {
-      this.animatingProducts.update(curr => ({ ...curr, [product.id]: true }));
+      this.animatingProducts.update(curr => ({ ...curr, [productId]: true }));
       setTimeout(() => {
         this.animatingProducts.update(curr => {
           const next = { ...curr };
-          delete next[product.id];
+          delete next[productId];
           return next;
         });
       }, 1200);
