@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit, AfterViewInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { CartService } from '../../../core/services/cart.service';
@@ -14,6 +14,7 @@ declare global {
         id: {
           initialize: (config: { client_id: string; callback: (response: { credential: string }) => void }) => void;
           prompt: () => void;
+          renderButton: (parent: HTMLElement, options: any) => void;
         };
       };
     };
@@ -49,15 +50,10 @@ declare global {
 
         @if (!otpSent()) {
           <div class="space-y-6 animate-fadeIn">
-            <!-- Google Login - Most Prominent -->
-            <button 
-              type="button"
-              (click)="loginWithGoogle()"
-              class="w-full flex justify-center items-center gap-4 py-4 px-6 border border-gray-100 rounded-2xl shadow-sm bg-white text-sm font-bold text-brand-dark hover:shadow-md hover:border-brand-green/20 active:scale-[0.98] transition-all duration-300"
-            >
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="w-6 h-6">
-              Continue with Google
-            </button>
+            <!-- Google Login - Standard Button -->
+            <div class="flex justify-center w-full">
+              <div id="google-btn-container" class="w-full flex justify-center [&>div]:w-full [&>div>div]:w-full min-h-[44px]"></div>
+            </div>
 
             <div class="relative py-4 mt-6 mb-2">
               <div class="absolute inset-0 flex items-center">
@@ -261,9 +257,13 @@ export class LoginComponent {
     }
   }
 
-  loginWithGoogle() {
+  ngOnInit() {
+    this.initGoogleLogin();
+  }
+
+  private initGoogleLogin() {
     if (!environment.googleClientId) {
-      this.snackbar.showError('Google login is not configured. Missing Google client ID.');
+      console.warn('Google login is not configured. Missing Google client ID.');
       return;
     }
 
@@ -281,15 +281,31 @@ export class LoginComponent {
                 this.cartService.mergeGuestCartAfterLogin();
                 this.snackbar.showSuccess('Google login successful');
                 this.router.navigate(['/']);
+              },
+              error: () => {
+                this.snackbar.showError('Google login failed');
               }
             });
           }
         });
 
+        const buttonContainer = document.getElementById('google-btn-container');
+        if (buttonContainer) {
+          window.google.accounts.id.renderButton(buttonContainer, {
+            theme: 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'rectangular',
+            logo_alignment: 'center'
+          });
+          // Also render button full width via css adjustments as done in html class
+        }
+
+        // Try to show One Tap as well (it may or may not show based on Google's rules)
         window.google.accounts.id.prompt();
       })
-      .catch(() => {
-        this.snackbar.showError('Unable to start Google login.');
+      .catch((err) => {
+        console.error('Failed to initialize Google login:', err);
       });
   }
 
