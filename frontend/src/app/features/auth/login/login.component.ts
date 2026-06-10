@@ -290,13 +290,16 @@ export class LoginComponent {
         });
 
         const buttonContainer = document.getElementById('google-btn-container');
+        const formContainer = document.querySelector('form');
         if (buttonContainer) {
+          const targetWidth = formContainer ? formContainer.clientWidth : 368;
           window.google.accounts.id.renderButton(buttonContainer, {
             theme: 'outline',
             size: 'large',
             text: 'continue_with',
             shape: 'rectangular',
-            logo_alignment: 'center'
+            logo_alignment: 'center',
+            width: Math.min(targetWidth, 400)
           });
           // Also render button full width via css adjustments as done in html class
         }
