@@ -8,8 +8,10 @@ spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "5"
+        run.googleapis.com/cpu-throttling: "true"
+        run.googleapis.com/startup-cpu-boost: "true"
     spec:
       containerConcurrency: 80
       timeoutSeconds: 300
@@ -87,30 +89,15 @@ spec:
               name: cloudflare-secret-key
               key: latest
         - name: CLOUDFLARE_ENDPOINT
-          valueFrom:
-            secretKeyRef:
-              name: cloudflare-endpoint
-              key: latest
+          value: "https://a707cb49c90aa1d9ed30f00c8559c50f.r2.cloudflarestorage.com"
         - name: CLOUDFLARE_AVATAR_BUCKET
-          valueFrom:
-            secretKeyRef:
-              name: cloudflare-avatar-bucket
-              key: latest
+          value: "devinevibes-avatars"
         - name: CLOUDFLARE_PRODUCT_BUCKET
-          valueFrom:
-            secretKeyRef:
-              name: cloudflare-product-bucket
-              key: latest
+          value: "devinevibes-products"
         - name: CLOUDFLARE_AVATAR_URL
-          valueFrom:
-            secretKeyRef:
-              name: cloudflare-avatar-url
-              key: latest
+          value: "https://avatars.devinevibes.in"
         - name: CLOUDFLARE_PRODUCT_URL
-          valueFrom:
-            secretKeyRef:
-              name: cloudflare-product-url
-              key: latest
+          value: "https://products.devinevibes.in"
 
         # Razorpay
         - name: RAZORPAY_KEY_ID
@@ -160,37 +147,26 @@ spec:
 
         # Email
         - name: EMAIL_HOST
-          valueFrom:
-            secretKeyRef:
-              name: email-host
-              key: latest
+          value: "smtp-relay.brevo.com"
         - name: EMAIL_PORT
-          valueFrom:
-            secretKeyRef:
-              name: email-port
-              key: latest
+          value: "587"
         - name: EMAIL_USER_NAME
-          valueFrom:
-            secretKeyRef:
-              name: email-user-name
-              key: latest
+          value: "9e4e44001@smtp-brevo.com"
         - name: EMAIL_SMTP_KEY
           valueFrom:
             secretKeyRef:
               name: email-smtp-key
               key: latest
         - name: EMAIL_SENDER
-          valueFrom:
-            secretKeyRef:
-              name: email-sender
-              key: latest
+          value: "notification@devinevibes.in"
         - name: EMAIL_SENDER_NAME
-          valueFrom:
-            secretKeyRef:
-              name: email-sender-name
-              key: latest
+          value: "Devine Vibes"
         - name: EMAIL_SENDER_ADDRESS
+          value: "Devine Vibes, Chirala, Andhra Pradesh, India"
+
+        # Internal API
+        - name: INTERNAL_JOB_SECRET
           valueFrom:
             secretKeyRef:
-              name: email-sender-address
+              name: internal-job-secret
               key: latest

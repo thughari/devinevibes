@@ -472,7 +472,6 @@ public class OrderService {
         value = {"user_orders#1h", "admin_orders#1m", "admin_analytics#5m"}, 
         allEntries = true
     )
-    @Scheduled(fixedRate = 300000)
     @Transactional
     public void autoCancelAbandonedOrders() {
         var config = storeConfigService.getConfig();

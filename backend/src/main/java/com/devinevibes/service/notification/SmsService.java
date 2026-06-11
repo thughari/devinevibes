@@ -6,7 +6,6 @@ import com.twilio.type.PhoneNumber;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,7 +27,6 @@ public class SmsService {
         Twilio.init(accountSid, authToken);
     }
 
-    @Async("notificationExecutor")
     public void sendOtp(String phone, String otp) {
         try {
             // Twilio requires E.164 format (+91 for India). 

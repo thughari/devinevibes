@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.UnsupportedEncodingException;
@@ -31,7 +30,6 @@ public class EmailService {
     @Value("${email.sender_name:Devine Vibes}") 
     private String fromName; 
 
-    @Async("notificationExecutor")
     public void sendLoginOtp(String to, String otp) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -75,7 +73,6 @@ public class EmailService {
         }
     }
 
-    @Async("notificationExecutor")
     public void sendOrderConfirmation(com.devinevibes.entity.order.Order order) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -192,7 +189,6 @@ public class EmailService {
             log.error("Failed to send order confirmation email to {}", order.getShippingEmail(), e);
         }
     }
-    @Async("notificationExecutor")
     public void sendOrderUpdate(com.devinevibes.entity.order.Order order, com.devinevibes.entity.order.OrderStatus status) {
         if (status != com.devinevibes.entity.order.OrderStatus.SHIPPED && status != com.devinevibes.entity.order.OrderStatus.DELIVERED) {
             return;
@@ -348,7 +344,6 @@ public class EmailService {
         }
     }
 
-    @Async("notificationExecutor")
     public void sendRefundConfirmation(com.devinevibes.entity.order.Order order) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -400,7 +395,6 @@ public class EmailService {
         }
     }
 
-    @Async("notificationExecutor")
     public void sendCancellationEmail(com.devinevibes.entity.order.Order order) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -452,7 +446,6 @@ public class EmailService {
         }
     }
 
-    @Async("notificationExecutor")
     public void sendRefundSettled(com.devinevibes.entity.order.Order order) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -492,7 +485,6 @@ public class EmailService {
         }
     }
 
-    @Async("notificationExecutor")
     public void sendRefundFailed(com.devinevibes.entity.order.Order order) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -526,7 +518,6 @@ public class EmailService {
         }
     }
 
-    @Async("notificationExecutor")
     public void sendPaymentFailed(String to, String orderId) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -563,7 +554,6 @@ public class EmailService {
         }
     }
 
-    @Async("notificationExecutor")
     public void send(String to, String subject, String body) {
         log.info("Simple EMAIL to={} subject={} body={}", to, subject, body);
     }

@@ -1,9 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/services/auth.service';
 import { SnackbarService } from '../../../shared/services/snackbar.service';
+import { environment } from '../../../../environments/environment';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-register',
@@ -143,27 +145,8 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
                 </span>
               </div>
             </div>
-
-            <div class="mt-6 grid grid-cols-2 gap-3">
-              <div>
-                <button type="button"
-                  class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-                  <span class="sr-only">Sign up with Google</span>
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
-                  </svg>
-                </button>
-              </div>
-
-              <div>
-                <button type="button"
-                  class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-                  <span class="sr-only">Sign up with Facebook</span>
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M20 10c0-5.523-4.477-10-10-10S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z" clip-rule="evenodd" />
-                  </svg>
-                </button>
-              </div>
+            <div class="mt-6 flex justify-center w-full">
+              <div id="google-btn-container" class="w-full flex justify-center [&>div]:w-full [&>div>div]:w-full min-h-[44px]"></div>
             </div>
           </div>
         </div>
@@ -171,11 +154,12 @@ import { SnackbarService } from '../../../shared/services/snackbar.service';
     </div>
   `
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
+  private cartService = inject(CartService);
 
   showPassword = signal(false);
   isLoading = signal(false);
@@ -187,6 +171,81 @@ export class RegisterComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
     confirmPassword: ['', [Validators.required]]
   }, { validators: this.passwordMatchValidator });
+
+  ngOnInit() {
+    this.initGoogleLogin();
+  }
+
+  private initGoogleLogin() {
+    if (!environment.googleClientId) {
+      console.warn('Google login is not configured. Missing Google client ID.');
+      return;
+    }
+
+    this.ensureGoogleScript()
+      .then(() => {
+        if (!window.google?.accounts?.id) {
+          throw new Error('Google Identity Services unavailable');
+        }
+
+        window.google.accounts.id.initialize({
+          client_id: environment.googleClientId,
+          callback: ({ credential }) => {
+            this.authService.loginWithGoogle({ idToken: credential }).subscribe({
+              next: () => {
+                this.cartService.mergeGuestCartAfterLogin();
+                this.snackbar.showSuccess('Google signup successful');
+                this.router.navigate(['/']);
+              },
+              error: () => {
+                this.snackbar.showError('Google signup failed');
+              }
+            });
+          }
+        });
+
+        const buttonContainer = document.getElementById('google-btn-container');
+        const formContainer = document.querySelector('form');
+        if (buttonContainer) {
+          const targetWidth = formContainer ? formContainer.clientWidth : 368;
+          window.google.accounts.id.renderButton(buttonContainer, {
+            theme: 'outline',
+            size: 'large',
+            text: 'signup_with',
+            shape: 'rectangular',
+            logo_alignment: 'center',
+            width: Math.min(targetWidth, 400)
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to initialize Google login:', err);
+      });
+  }
+
+  private ensureGoogleScript(): Promise<void> {
+    if (window.google?.accounts?.id) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-google-identity="true"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('load error')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.dataset['googleIdentity'] = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('load error'));
+      document.head.appendChild(script);
+    });
+  }
 
   passwordMatchValidator(g: AbstractControl) {
     return g.get('password')?.value === g.get('confirmPassword')?.value

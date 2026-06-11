@@ -6,7 +6,7 @@ import com.devinevibes.entity.order.PaymentStatus;
 import com.devinevibes.repository.order.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +25,6 @@ public class OrderCleanupService {
      * Runs every 5 minutes to cancel stale pending prepaid orders.
      * Stale is defined as PENDING for more than 20 minutes.
      */
-    @Scheduled(fixedRate = 300000) // 5 minutes
     @Transactional
     public void cancelStaleOrders() {
         log.info("Starting scheduled cleanup of stale pending orders...");

@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**", "/api/config", "/api/banners", "/api/categories").permitAll()
+                        .requestMatchers("/api/internal/**").permitAll()
                         .requestMatchers(publicEndpoints).permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint((request, response, authException) -> {
